@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<!--
+  美食冒險家  v2.2  ·  2026-10-21
+  v2.2 打魔王時會不定時從天上掉小吃（體力低時多掉補血小吃）
+  v2.1 走路更順（腳不再陷進地面）、改成兩段跳（棉花糖可一直飄）、被打到能力會消失、新增 5 種武器與 4 種新敵人
+  橫向捲軸「吸入／吐星／複製能力」3D 動作過關遊戲（Three.js）
+  ・上傳自己做的角色（Tinkercad .zip / .obj+.mtl / .glb / .stl），會自動辨識手、腳、頭頂配件並做出動作
+  ・5 個台南主題關卡＋2 隻中魔王＋最終魔王雷雲王
+  ・17 種台南小吃（12 種特別能力＋5 種補給）＋11 種敵人複製能力，附小吃圖鑑
+  ・配樂：music/ 資料夾內的 mp3；找不到時自動改用內建合成配樂
+  ・存檔：瀏覽器 localStorage／IndexedDB（角色、進度、圖鑑、設定）
+  ・部署：整個資料夾（index.html＋music/）拖到 Netlify 或放 GitHub Pages
+  v2.0 角色自由動作、場景敵人大升級、小吃 17 種與圖鑑、正式配樂、存檔點、手把、設定、評等
+  v1.x 初版到配樂（2026-10-20）
+-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>美食冒險家</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+/*CSS*/
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="stage"></div>
+<div id="vignette"></div>
+
+<!-- 讀取畫面 -->
+<div id="boot"><div class="boot-card"><div class="boot-logo">美食冒險家</div><div class="boot-bar"><i id="bootFill"></i></div><div id="bootText">準備鍋碗瓢盆…</div></div></div>
+
+<!-- HUD -->
+<div id="hud" hidden>
+  <div class="hudbox hud-l">
+    <div class="hp" id="hp"></div>
+    <div class="meta"><span class="num" id="lives">♥ ×3</span><span class="num" id="stars">★ 0</span><span class="num" id="timer">0:00</span></div>
+  </div>
+  <div class="hudbox hud-m">
+    <div id="lvname"></div>
+    <div id="bossbar" hidden><span id="bossName">魔王</span><div class="bar"><i id="bossfill"></i></div></div>
+  </div>
+  <div class="hud-r">
+    <div class="hudbox" id="ability"><b id="abIcon">○</b><div><span id="abName">沒有能力</span><small id="abHint">按住 J 吸住敵人</small></div></div>
+    <button class="btn iconbtn" id="btnPause" aria-label="暫停">❚❚</button>
+  </div>
+</div>
+<div id="toast"></div>
+<div id="banner"><div class="banner-in"><small id="bannerSub"></small><b id="bannerTitle"></b></div></div>
+<div id="sign" hidden></div>
+
+<!-- 觸控 -->
+<div id="touch" hidden>
+  <div class="pad">
+    <div class="tb" data-k="left">◀</div>
+    <div class="tb" data-k="down">吞↓</div>
+    <div class="tb" data-k="right">▶</div>
+  </div>
+  <div class="pad">
+    <div class="tb" data-k="drop">丟</div>
+    <div class="tb big" data-k="atk">吸</div>
+    <div class="tb big" data-k="jump">跳</div>
+  </div>
+</div>
+
+<!-- 標題 -->
+<section class="screen" id="title" hidden>
+  <div class="title-wrap">
+    <div class="title-left">
+      <h1 class="logo"><span class="s">大橋</span><span class="b"><span>美</span><span>食</span><span>冒</span><span>險</span><span>家</span></span></h1>
+      <span class="ver num">v2.2 · 2026-10-21</span>
+      <nav class="menu">
+        <button class="btn go" id="btnPlay">開始冒險</button>
+        <button class="btn" id="btnDex">🍜 小吃圖鑑 <small id="dexCount" class="num"></small></button>
+        <button class="btn" id="btnSettings">⚙ 設定</button>
+        <button class="btn" id="btnHow">❔ 怎麼玩</button>
+      </nav>
+    </div>
+    <div class="card charcard">
+      <h2>我的角色 <span class="tag" id="charTag">預設</span></h2>
+      <div id="previewBox"><canvas id="preview" width="360" height="360"></canvas><span class="hint" id="pvHint">待機</span></div>
+      <div class="row acts" id="actRow">
+        <button class="chip" data-act="walk">走路</button>
+        <button class="chip" data-act="jump">跳躍</button>
+        <button class="chip" data-act="float">飄浮</button>
+        <button class="chip" data-act="attack">攻擊</button>
+        <button class="chip" data-act="wave">揮手</button>
+        <button class="chip" data-act="dance">跳舞</button>
+      </div>
+      <label class="drop" id="dropZone">
+        ⬆ 上傳我的角色
+        <small>Tinkercad 匯出 .OBJ 下載的 zip 直接丟進來（也可 .obj+.mtl／.glb／.stl）</small>
+        <input type="file" id="fileIn" multiple accept=".zip,.obj,.mtl,.glb,.gltf,.bin,.stl,.png,.jpg,.jpeg" hidden>
+      </label>
+      <div class="row">
+        <button class="btn sm" id="btnYaw">↻ 轉向</button>
+        <button class="btn sm" id="btnUp">⤒ 扶正</button>
+        <button class="btn sm" id="btnDefault">用預設角色</button>
+      </div>
+      <div id="charStatus">正面要朝向你；不是的話按「轉向」。</div>
+    </div>
+  </div>
+</section>
+
+<!-- 選關 -->
+<section class="screen veil" id="map" hidden>
+  <div class="panel wide">
+    <div class="panel-head"><h2>選擇關卡</h2><button class="btn sm" data-close>← 返回</button></div>
+    <div class="levels" id="levelList"></div>
+  </div>
+</section>
+
+<!-- 小吃圖鑑 -->
+<section class="screen veil" id="dex" hidden>
+  <div class="panel wide">
+    <div class="panel-head"><h2>台南小吃圖鑑 <small class="num" id="dexCount2"></small></h2><button class="btn sm" data-close>← 返回</button></div>
+    <div class="dex-grid" id="dexGrid"></div>
+  </div>
+</section>
+
+<!-- 怎麼玩 -->
+<section class="screen veil" id="how" hidden>
+  <div class="panel">
+    <div class="panel-head"><h2>怎麼玩</h2><button class="btn sm" data-close>← 返回</button></div>
+    <div class="how-body">
+      <table class="keys">
+        <tr><th>移動</th><td><span class="kbd">←</span><span class="kbd">→</span> 或 <span class="kbd">A</span><span class="kbd">D</span></td></tr>
+        <tr><th>跳／二段跳</th><td><span class="kbd">空白</span> 或 <span class="kbd">↑</span>　在空中可以再跳一次；吃到 🍭 棉花糖後 15 秒內可以一直飄</td></tr>
+        <tr><th>吸入／攻擊</th><td>按住 <span class="kbd">J</span>（或 <span class="kbd">X</span>）把敵人吸進嘴裡，再按一次吐出星星</td></tr>
+        <tr><th>吞下</th><td><span class="kbd">↓</span> 把嘴裡的敵人吞下，複製牠的能力</td></tr>
+        <tr><th>丟掉能力</th><td><span class="kbd">K</span>（或 <span class="kbd">C</span>）</td></tr>
+        <tr><th>揮手／跳舞</th><td><span class="kbd">E</span>　讓你的角色表演一下</td></tr>
+        <tr><th>暫停</th><td><span class="kbd">P</span> 或 <span class="kbd">Esc</span></td></tr>
+        <tr><th>手把</th><td>A 跳、X／B 吸入攻擊、Y 丟能力、方向鍵下吞、Start 暫停</td></tr>
+      </table>
+      <p>被敵人打到，身上的能力會不見，要再吸一隻敵人或吃小吃才能拿回來。吃到<b>台南小吃</b>會得到特別能力或補體力；打魔王時天上會不定時掉下小吃，記得去接；碰到旗子會存檔，掉下去會從旗子重新開始。每關收集星星、找齊小吃，拿到 S 評等吧！</p>
+    </div>
+  </div>
+</section>
+
+<!-- 設定 -->
+<section class="screen veil" id="settings" hidden>
+  <div class="panel">
+    <div class="panel-head"><h2>設定</h2><button class="btn sm" data-close>← 返回</button></div>
+    <div class="set-body">
+      <label class="set-row"><span>🎵 音樂音量</span><input type="range" id="volMusic" min="0" max="100" step="5"><b class="num" id="volMusicV"></b></label>
+      <label class="set-row"><span>🔊 音效音量</span><input type="range" id="volSfx" min="0" max="100" step="5"><b class="num" id="volSfxV"></b></label>
+      <div class="set-row"><span>✨ 畫質</span><div class="seg" id="qualSeg"><button data-q="auto">自動</button><button data-q="high">高</button><button data-q="mid">中</button><button data-q="low">低</button></div></div>
+      <div class="set-row"><span>📱 觸控按鈕</span><div class="seg" id="touchSeg"><button data-t="auto">自動</button><button data-t="on">顯示</button><button data-t="off">隱藏</button></div></div>
+      <div class="set-row"><span>🗑 進度</span><button class="btn sm" id="btnReset">清除進度</button><span id="resetConfirm" hidden><button class="btn sm danger" id="btnResetYes">確定清除</button> <button class="btn sm" id="btnResetNo">取消</button></span></div>
+      <p class="credit">配樂：darkvocals282（Suno 生成，取自大橋大車拚）・3D 函式庫：three.js・字型：Noto Sans TC、Baloo 2</p>
+    </div>
+  </div>
+</section>
+
+<!-- 暫停 -->
+<section class="screen veil" id="pause" hidden>
+  <div class="card dialog">
+    <h2>暫停中</h2>
+    <p id="pauseInfo">休息一下，準備好再出發。</p>
+    <div class="row">
+      <button class="btn go" id="btnResume">繼續</button>
+      <button class="btn" id="btnRetry">從存檔點重來</button>
+      <button class="btn" id="btnPauseSet">設定</button>
+      <button class="btn" id="btnHome">回標題</button>
+    </div>
+  </div>
+</section>
+
+<!-- 結果 -->
+<section class="screen veil" id="result" hidden>
+  <div class="card dialog result">
+    <div class="rank num" id="resRank"></div>
+    <h2 id="resTitle"></h2>
+    <div class="res-stats" id="resStats"></div>
+    <p id="resText"></p>
+    <div class="row" id="resBtns"></div>
+  </div>
+</section>
+
+<div id="iris"></div>
+<div id="rotate"><div class="card"><span class="ph">📱</span>把手機橫過來玩<br><small>橫向畫面才看得到前面的路</small></div></div>
+
+<script type="module">
+/*JS*/
+</script>
+</body>
+</html>
