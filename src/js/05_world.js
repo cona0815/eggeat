@@ -377,4 +377,5 @@ function buildDecor(th){
       w.position.set(x+3, top, -3.4); add(noShadow(w));
     }
   }
+  buildCritters(theme, W, rnd, add, noShadow, groundTop);
 }

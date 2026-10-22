@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <!--
-  美食冒險家  v2.2  ·  2026-10-21
+  美食冒險家  v2.3  ·  2026-10-22
+  v2.3 二段跳更有力（會翻一圈）、下降更快、第一關開頭的火球怪不發射、場景加入會動的小生物、新小吃鍋燒意麵（魚丸護衛）
   v2.2 打魔王時會不定時從天上掉小吃（體力低時多掉補血小吃）
   v2.1 走路更順（腳不再陷進地面）、改成兩段跳（棉花糖可一直飄）、被打到能力會消失、新增 5 種武器與 4 種新敵人
   橫向捲軸「吸入／吐星／複製能力」3D 動作過關遊戲（Three.js）
   ・上傳自己做的角色（Tinkercad .zip / .obj+.mtl / .glb / .stl），會自動辨識手、腳、頭頂配件並做出動作
   ・5 個台南主題關卡＋2 隻中魔王＋最終魔王雷雲王
-  ・17 種台南小吃（12 種特別能力＋5 種補給）＋11 種敵人複製能力，附小吃圖鑑
+  ・18 種台南小吃（13 種特別能力＋5 種補給）＋11 種敵人複製能力，附小吃圖鑑
   ・配樂：music/ 資料夾內的 mp3；找不到時自動改用內建合成配樂
   ・存檔：瀏覽器 localStorage／IndexedDB（角色、進度、圖鑑、設定）
   ・部署：整個資料夾（index.html＋music/）拖到 Netlify 或放 GitHub Pages
@@ -278,7 +279,7 @@ h1,h2,h3{text-wrap:balance}
   <div class="title-wrap">
     <div class="title-left">
       <h1 class="logo"><span class="s">大橋</span><span class="b"><span>美</span><span>食</span><span>冒</span><span>險</span><span>家</span></span></h1>
-      <span class="ver num">v2.2 · 2026-10-21</span>
+      <span class="ver num">v2.3 · 2026-10-22</span>
       <nav class="menu">
         <button class="btn go" id="btnPlay">開始冒險</button>
         <button class="btn" id="btnDex">🍜 小吃圖鑑 <small id="dexCount" class="num"></small></button>
@@ -405,7 +406,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeVertices, mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
-const VERSION = 'v2.2', BUILD_DATE = '2026-10-21';
+const VERSION = 'v2.3', BUILD_DATE = '2026-10-22';
 
 /* =====================================================================
    小工具
@@ -1409,6 +1410,7 @@ const ABIL = {
   eel:     { name:'鱔魚旋風', snack:true, icon:'🌀', color:0x7a4a2a, css:'#8a5a32', hint:'按 J 原地旋轉，捲走四周敵人' },
   oyster:  { name:'蚵仔煎飛盤',snack:true, icon:'🥏', color:0xf2d36b, css:'#d4a82a', hint:'按 J 丟出會飛回來的蚵仔煎' },
   zongzi:  { name:'粽子大鎚', snack:true, icon:'🔨', color:0x5a9a3a, css:'#4f8a32', hint:'按 J 大鎚重擊，打碎鐵塊' },
+  guoshao: { name:'魚丸護衛', snack:true, icon:'🍢', color:0xfbf0d8, css:'#d9a441', hint:'按 J 叫出 3 顆魚丸繞著你轉，再按 J 射出去' },
   pengbing:{ name:'椪餅膨膨', snack:true, icon:'🫓', color:0xe2b066, css:'#c98f3a', hint:'按 J 膨脹放出衝擊波' },
 };
 const COPY_ABILITIES = ['fire','ice','sword','rock','spark','bomb','shuriken','arrow','laser','umbrella','yoyo'];
@@ -1429,13 +1431,14 @@ const SNACKS = {
   oyster:     { name:'蚵仔煎',   type:'ability', fact:'新鮮的蚵仔加上地瓜粉漿和蛋一起煎，起鍋前淋上甜辣醬，是夜市常客。' },
   zongzi:     { name:'菜粽',     type:'ability', fact:'台南的菜粽用花生和糯米包成，吃的時候撒上花生粉，常配一碗味噌湯。' },
   pengbing:   { name:'椪餅',     type:'ability', fact:'又叫「膨餅」，中間是空心的。傳統上可以敲開一個洞，打蛋進去用麻油煎。' },
+  guoshao:    { name:'鍋燒意麵', type:'ability', fact:'台南人很愛的宵夜。小鍋子裡煮著油炸過的意麵，加上魚丸、蝦子、蛋和青菜，熱呼呼一鍋。' },
   beef:       { name:'牛肉湯',   type:'heal', heal:6, fact:'台南人的早餐好朋友。生牛肉片用滾燙的湯一沖就熟，又嫩又鮮。吃了體力全滿，還會跑更快！' },
   almond:     { name:'杏仁茶',   type:'heal', heal:1, fact:'用杏仁磨漿煮成的熱飲，常搭配油條一起吃。喝了會產生護身泡泡，擋下一次傷害。' },
   wintermelon:{ name:'冬瓜茶',   type:'heal', heal:2, fact:'用冬瓜和糖熬煮成的古早味飲料，台南有開了很多年的老店。喝了補 2 格體力。' },
   shrimprice: { name:'蝦仁飯',   type:'heal', heal:3, fact:'台南特色小吃，用蝦仁和醬汁拌炒出香噴噴的米飯，常配一顆半熟鴨蛋。補 3 格體力。' },
   migao:      { name:'米糕',     type:'heal', heal:4, fact:'蒸好的糯米飯鋪上肉燥、魚鬆和小黃瓜片，是台南人愛吃的點心。補 4 格體力。' },
 };
-const SNACK_ORDER = ['noodle','shrimp','coffin','douhua','fish','wangguo','mango','rouyuan','eel','oyster','zongzi','pengbing','beef','almond','wintermelon','shrimprice','migao'];
+const SNACK_ORDER = ['noodle','shrimp','coffin','douhua','fish','wangguo','mango','rouyuan','eel','oyster','zongzi','pengbing','guoshao','beef','almond','wintermelon','shrimprice','migao'];
 
 /* 小吃模型：以 3dcar 的 envFood 為基礎改成卡通材質（原單位約半徑 5，最後統一縮放） */
 const _snackCache = new Map();
@@ -1531,6 +1534,15 @@ function snackModel(kind){
       add(new THREE.SphereGeometry(1.1,12,8), M(0xfff6e6), 2.6,1.6,1).scale.y = .5;
       add(new THREE.SphereGeometry(.55,10,8), M(0xf2a020), 2.6,1.95,1).scale.y = .5;
       scallion(4, 2, 1.2); break;
+    case 'guoshao':
+      add(new THREE.CylinderGeometry(4.6,4,3.2,24), M(0x4a4a58), 0,-1.2,0);
+      for(const sx of [-1,1]) add(new THREE.TorusGeometry(.9,.3,6,12), M(0x3a3a46), sx*4.9,-.2,0).rotation.y = Math.PI/2;
+      add(new THREE.CylinderGeometry(4.3,4.3,.2,24), M(0xd9a35a), 0,.35,0);
+      for(let k=0;k<4;k++) add(new THREE.TorusGeometry(1.2+k*.55,.2,5,18), M(0xf2cf7a), 0,.5,0).rotation.x = Math.PI/2;
+      for(const [x,z] of [[-1.8,1.2],[1.6,1.4],[.2,-2]]) add(new THREE.SphereGeometry(.85,12,8), M(0xfbf6ea), x,1,z);
+      add(new THREE.SphereGeometry(1.2,12,8), M(0xfff6e6), 1.9,.8,-.9).scale.y = .45; add(new THREE.SphereGeometry(.55,10,8), M(0xf2a020), 1.9,1.05,-.9).scale.y = .5;
+      add(new THREE.TorusGeometry(.7,.3,6,12,Math.PI*1.3), M(0xff8a5a), -1.4,1,-1.4).rotation.x = -Math.PI/2;
+      scallion(5, .75, 2.6); break;
     case 'migao':
       add(new THREE.CylinderGeometry(3.4,3,3.4,20), M(0xcfd6de), 0,-1.2,0);
       add(new THREE.SphereGeometry(3.2,16,10), M(0xa8743c), 0,.6,0).scale.y = .4;
@@ -1795,9 +1807,9 @@ const LEVELS = [
       g.ground(0,30,3);
       g.sign(3,3,'← → 移動，空白鍵跳'); g.stars(7,10,5);
       g.sign(12,3,'按住 J 把敵人吸進嘴裡，再按 J 吐出星星！'); g.enemy('acorn',17,3); g.enemy('acorn',25,3);
-      g.sign(28,3,'在空中再按跳，會鼓起來飄喔');
+      g.sign(28,3,'在空中再按一次跳，可以二段跳！');
       g.ground(34,64,3); g.box(42,45,3,4);
-      g.sign(36,3,'吸住火球怪後按 ↓ 吞下去，就能複製火焰！'); g.enemy('flame',39,3);
+      g.sign(36,3,'吸住火球怪後按 ↓ 吞下去，就能複製火焰！'); g.enemy('flame',39,3,{ passive:true });
       g.plat(48,52,7); g.stars(48,52,8); g.enemy('bird',54,8.5);
       g.sign(57,3,'吃台南小吃會得到特別能力！'); g.item('noodle',60,3);
       g.ground(68,100,3); g.enemy('acorn',72,3); g.enemy('knight',80,3);
@@ -1806,7 +1818,7 @@ const LEVELS = [
       g.item('cotton',110,3); g.spring(112,3); g.plat(114,120,10); g.stars(114,120,11); g.item('wintermelon',121,11);
       g.enemy('frog',124,3); g.box(128,131,3,4); g.box(132,135,3,6); g.enemy('rocky',133,7);
       g.mover(140,5.5,3, 6,0, 1.6);
-      g.ground(151,199,3); g.enemy('bird',157,8); g.enemy('yoyokid',162,3); g.item('beef',166,3);
+      g.ground(151,199,3); g.sign(153,3,'鍋燒意麵：叫出魚丸繞著你轉，再按 J 射出去'); g.item('guoshao',155,3); g.enemy('bird',159,8); g.enemy('yoyokid',162,3); g.item('beef',166,3);
       g.enemy('flame',172,3); g.stars(174,178,5); g.enemy('bomber',182,3); g.metal(187,187,3,5); g.stars(188,190,4);
       g.door(195,3);
   }},
@@ -1830,7 +1842,7 @@ const LEVELS = [
       g.mover(70,5,3, 0,4, 1.2); g.plat(76,79,7);
       g.ground(82,104,3); g.checkpoint(84,3); g.item('fish',88,3); g.spikes(92,95,3); g.plat(91,96,6); g.enemy('knight',100,3);
       g.mover(106,5,3, 7,0, 1.8); g.enemy('spiky',109,8); g.enemy('bird',112,9);
-      g.ground(117,140,3); g.enemy('rocky',121,3); g.enemy('ninja',126,3); g.item('almond',133,3); g.enemy('spark',137,3);
+      g.ground(117,140,3); g.enemy('rocky',121,3); g.enemy('ninja',126,3); g.item('guoshao',129,3); g.item('almond',133,3); g.enemy('spark',137,3);
       g.box(141,143,0,5); g.stars(141,143,7);
       g.ground(144,170,3); g.checkpoint(146,3); g.enemy('parasol',152,14); g.enemy('bomber',158,3); g.item('beef',163,3);
       g.mover(172,4.5,3, 0,5, 1.3); g.plat(176,180,9); g.stars(176,180,10); g.enemy('spiky',183,7);
@@ -1838,7 +1850,7 @@ const LEVELS = [
   }},
   { name:'花園夜市', theme:'nightmarket', width:222, par:200, build(g){
       g.ground(0,36,3); g.enemy('ghost',14,4); g.item('rouyuan',20,3); g.enemy('flame',27,3); g.stars(30,34,5);
-      g.ground(40,72,3); g.enemy('bomber',46,3); g.plat(50,56,6); g.stars(50,56,7); g.item('eel',58,3); g.enemy('frog',62,3);
+      g.ground(40,72,3); g.enemy('bomber',46,3); g.plat(50,56,6); g.stars(50,56,7); g.item('eel',58,3); g.enemy('frog',62,3); g.item('guoshao',66,3);
       g.enemy('cannon',70,3,{ dir:-1 }); g.mover(73,4.5,3, 4,0, 1.5);
       g.ground(82,118,3); g.checkpoint(84,3); g.enemy('ghost',92,5); g.item('coffin',96,3); g.metal(102,102,3,5);
       g.enemy('laserbot',107,3); g.spikes(112,114,3); g.plat(111,115,6); g.item('migao',113,7);
@@ -2239,6 +2251,140 @@ function buildDecor(th){
       w.position.set(x+3, top, -3.4); add(noShadow(w));
     }
   }
+  buildCritters(theme, W, rnd, add, noShadow, groundTop);
+}
+
+/* ───── 05b_critters.js ───── */
+/* =====================================================================
+   v2.3 會動的場景小生物：蝴蝶、花、鳥群、兔子、鴿子、旗子、氣球、煙火、螢火蟲、蝙蝠
+   全部放進 flickers，用 fn(f, dt) 更新；離鏡頭太遠就不更新
+   ===================================================================== */
+const _wingGeo = new THREE.CircleGeometry(1, 10);
+function wing(col, sx){ const pv = new THREE.Group(); const w = new THREE.Mesh(_wingGeo, new THREE.MeshToonMaterial({ color:col, gradientMap:gradTex, side:THREE.DoubleSide }));
+  w.userData.ownMat = true; w.scale.set(.22, .17, 1); w.position.x = sx*.2; w.rotation.x = -Math.PI/2; pv.add(w); return pv; }
+function buildCritters(theme, W, rnd, add, noShadow, groundTop){
+  const live = (o, fn, extra={}) => { flickers.push({ o, t:rnd()*10, fn, cx:o.position.x, ...extra }); return o; };
+  const ink = basic(0x1d1d2b);
+
+  // 蝴蝶（白天）
+  const butterfly = (x, y, z, col) => {
+    const g = new THREE.Group(); g.add(mesh(G.cyl, ink, .03,.22,.03)); g.children[0].rotation.z = Math.PI/2;
+    const l = wing(col, -1), r = wing(col, 1); g.add(l, r); g.position.set(x, y, z); add(noShadow(g));
+    live(g, (f, dt) => { const px = g.position.x; g.position.x = f.cx + Math.sin(f.t*.45)*2.6; g.position.y = y + Math.sin(f.t*1.4)*.5 + Math.sin(f.t*3.1)*.15;
+      g.rotation.y = g.position.x > px ? 0 : Math.PI; const a = Math.sin(f.t*22)*.9; l.rotation.x = a; r.rotation.x = -a; });
+  };
+  // 會搖的花
+  const flower = (x, y, z, col) => {
+    const g = new THREE.Group(); g.add(mesh(G.cyl, toon(0x4f9a3f), .03,.5,.03, 0,.25,0));
+    const head = new THREE.Group(); head.position.y = .52; g.add(head);
+    head.add(mesh(G.sphereLo, toon(col), .2,.2,.04));
+    head.add(mesh(G.sphereLo, toon(0xffd23f), .07,.07,.06, 0,0,.03));
+    g.position.set(x, y, z); add(noShadow(g));
+    live(g, (f) => { g.rotation.z = Math.sin(f.t*1.8)*.14; head.rotation.z = f.t*.3; });
+  };
+  // 背景鳥群／蝙蝠群：從畫面一邊飛到另一邊，循環
+  const flock = (col, bat) => {
+    const g = new THREE.Group(); const birds = [];
+    for(let i=0;i<5;i++){ const b = new THREE.Group(); const l = wing(col, -1), r = wing(col, 1); l.scale.set(bat?1.4:1.2,1,1); r.scale.set(bat?1.4:1.2,1,1);
+      b.add(l, r, mesh(G.sphereLo, toon(col), .1,.08,.08)); b.position.set(-Math.abs(i-2)*.7, -Math.abs(i-2)*.45 + (i%2)*.1, i*.2); g.add(b); birds.push({ b, l, r, ph:i }); }
+    g.position.set(rnd()*W, 13 + rnd()*5, -14 - rnd()*6); add(noShadow(g));
+    live(g, (f, dt) => { g.position.x += (bat ? 4.2 : 3.2)*dt; g.position.y += Math.sin(f.t*.7)*.3*dt;
+      if(g.position.x > camX + 40){ g.position.x = camX - 40; g.position.y = (bat ? 11 : 13) + Math.random()*5; }
+      for(const k of birds){ const a = Math.sin(f.t*(bat ? 18 : 9) + k.ph)*.8; k.l.rotation.x = a; k.r.rotation.x = -a; } }, { always:true });
+  };
+  // 會跳的兔子（草原背景）
+  const bunny = (x, z) => {
+    const g = new THREE.Group(); const top = groundTop(x);
+    g.add(mesh(G.sphere, toon(0xffffff), .32,.28,.4, 0,.28,0)); g.add(mesh(G.sphere, toon(0xffffff), .22,.22,.22, 0,.55,.3));
+    for(const sx of [-1,1]) { const e = mesh(G.sphere, toon(0xffffff), .06,.22,.05, sx*.08,.85,.28); e.rotation.z = sx*.15; g.add(e); g.add(mesh(G.sphereLo, toon(0xffb3c8), .03,.14,.02, sx*.08,.85,.32)); }
+    g.add(mesh(G.sphereLo, ink, .03,.04,.02, .1,.6,.5)); g.add(mesh(G.sphereLo, ink, .03,.04,.02, -.1,.6,.5));
+    g.position.set(x, top, z); g.rotation.y = Math.PI/2; add(noShadow(addOutline(g, .03)));
+    let hopT = rnd()*3, dir = 1, vy = 0, yy = 0;
+    live(g, (f, dt) => { hopT -= dt; if(hopT <= 0 && yy === 0){ vy = 4.5; hopT = 1.2 + Math.random()*2.5; if(Math.abs(g.position.x - f.cx) > 4) dir = Math.sign(f.cx - g.position.x); else if(Math.random() < .3) dir = -dir; g.rotation.y = dir*Math.PI/2; }
+      if(vy !== 0 || yy > 0){ vy -= 18*dt; yy += vy*dt; g.position.x += dir*1.8*dt; if(yy <= 0){ yy = 0; vy = 0; } }
+      g.position.y = groundTop(g.position.x) + yy; g.scale.y = yy > 0 ? 1.1 : 1; });
+  };
+  // 啄米的鴿子（老街）
+  const pigeon = (x, z) => {
+    const g = new THREE.Group(); const top = groundTop(x);
+    g.add(mesh(G.sphere, toon(0x9aa0b4), .26,.22,.2, 0,.24,0)); const head = mesh(G.sphere, toon(0x7a8098), .13,.13,.13, .22,.42,0); g.add(head);
+    head.add(mesh(G.cone, toon(0xffb02e), .3,.5,.3, .8,0,0)); head.children[0].rotation.z = -Math.PI/2; head.add(mesh(G.sphereLo, ink, .25,.25,.25, .4,.3,.6));
+    g.add(mesh(G.sphere, toon(0x6f7690), .2,.12,.18, -.18,.3,0));
+    g.position.set(x, top, z); if(rnd() < .5) g.rotation.y = Math.PI; add(noShadow(addOutline(g, .03)));
+    let flyT = 0;
+    live(g, (f, dt) => { const peck = Math.max(0, Math.sin(f.t*5)); head.position.set(.22 + peck*.06, .42 - peck*.2, 0);
+      if(P && Math.abs(P.x - g.position.x) < 1.5 && Math.abs(P.y - g.position.y) < 2 && flyT <= 0) flyT = 2.2;
+      if(flyT > 0){ flyT -= dt; g.position.y = groundTop(f.cx) + Math.sin((1 - flyT/2.2)*Math.PI)*4; g.position.x += (g.rotation.y ? -3 : 3)*dt; if(flyT <= 0){ g.position.x = f.cx; g.position.y = groundTop(f.cx); } } });
+  };
+  // 飄動的旗子
+  const banner = (x, z, col) => {
+    const top = groundTop(x), g = new THREE.Group();
+    g.add(mesh(G.cyl, toon(0x6a4a3a), .04,2.6,.04, 0,1.3,0));
+    const segs = []; for(let i=0;i<4;i++){ const s = mesh(G.box, toon(i%2 ? 0xffffff : col), .3,.8,.03, .17 + i*.3, 2.15, 0); g.add(s); segs.push(s); }
+    g.position.set(x, top, z); add(noShadow(g));
+    live(g, (f) => segs.forEach((s, i) => { s.position.z = Math.sin(f.t*4 - i*.9)*.12*(i+1)*.5; s.rotation.y = Math.cos(f.t*4 - i*.9)*.3; }));
+  };
+  // 往上飄的氣球（雲海）
+  const balloon = (x) => {
+    const g = new THREE.Group(), col = pick([0xff6b9a, 0x69c3ff, 0xffd23f, 0x7ef07a, 0xc9a8ff]);
+    g.add(mesh(G.sphere, toon(col), .45,.55,.45, 0,.6,0)); g.add(mesh(G.cone, toon(col), .12,.14,.12, 0,.02,0));
+    const str = mesh(G.cyl, toon(0xffffff), .01,1.1,.01, 0,-.55,0); g.add(str);
+    const z = -3 - rnd()*8, y0 = rnd()*16;
+    g.position.set(x, y0, z); add(noShadow(addOutline(g, .03)));
+    live(g, (f, dt) => { g.position.y += .9*dt; g.position.x = f.cx + Math.sin(f.t*.8)*.6; g.rotation.z = Math.sin(f.t*1.3)*.12; if(g.position.y > 22) g.position.y = -2; });
+  };
+  // 煙火（夜市、古堡偶爾）
+  const fireworks = (cols, every) => {
+    const o = new THREE.Object3D(); o.position.x = 0; add(o);
+    let next = 1 + rnd()*2;
+    live(o, (f, dt) => { next -= dt; if(next > 0 || !QUALITY[quality].detail) return; next = every*(.6 + Math.random()*.8);
+      const x = camX + (Math.random() - .5)*30, y = 13 + Math.random()*6, z = -18 - Math.random()*8, col = pick(cols);
+      for(let i=0;i<4;i++) emit(x, y - 6 + i*1.5, z, 0, 0, 0, .25 + i*.05, '#ffe9b0', .25);
+      setTimeout(() => { for(let i=0;i<36;i++){ const a = i/36*Math.PI*2, s = 5 + Math.random()*1.5; emit(x, y, z, Math.cos(a)*s, Math.sin(a)*s, 0, 1.3, i%3 ? col : '#ffffff', .45, 3, 1.4); } }, 300);
+    }, { always:true });
+  };
+  // 螢火蟲／幽光
+  const firefly = (x, y, z, col) => {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map:glowTexture(col), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending }));
+    s.userData.ownMat = true; s.scale.set(.6,.6,1); s.position.set(x, y, z); add(s);
+    live(s, (f) => { s.position.x = f.cx + Math.sin(f.t*.6)*1.5; s.position.y = y + Math.sin(f.t*.9)*.8; s.material.opacity = .45 + Math.sin(f.t*4)*.35; });
+  };
+  // 晃動的蠟燭（古堡）
+  const candle = (x, y, z) => {
+    const g = new THREE.Group(); g.add(mesh(G.cyl, toon(0xfff2d6), .08,.35,.08, 0,.17,0));
+    const fl = mesh(G.cone, toon(0xffb02e,{ emissive:0xcc5500 }), .06,.16,.06, 0,.44,0); g.add(fl);
+    const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map:glowTexture('#ffb070'), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, opacity:.8 }));
+    gl.userData.ownMat = true; gl.scale.set(1.1,1.1,1); gl.position.y = .45; g.add(gl);
+    g.position.set(x, y, z); add(noShadow(g));
+    live(g, (f) => { g.position.y = y + Math.sin(f.t*1.1)*.25; fl.scale.y = 1 + Math.sin(f.t*18)*.25; });
+  };
+
+  const okGround = x => { const t = groundTop(x); return t > 0 ? t : null; };
+  const petals = [0xff6b9a, 0xffd23f, 0xffffff, 0xc9a8ff, 0xff9a5a, 0x69c3ff];
+  if(theme === 'meadow'){
+    for(let x=4;x<W-2;x+=2.2 + rnd()*3){ const t = okGround(x); if(t !== null) flower(x, t, 1.1 + rnd()*.4, pick(petals)); }
+    for(let x=8;x<W;x+=9 + rnd()*8){ const t = okGround(x); if(t !== null) butterfly(x, t + 1.6 + rnd()*1.5, -.5 + rnd()*1.5, pick([0xff9ad6, 0xffd23f, 0x8fd0ff, 0xffffff])); }
+    for(let x=14;x<W;x+=24 + rnd()*14){ const t = okGround(x); if(t !== null) bunny(x, -2.6); }
+    flock(0x3a3f5c); flock(0x3a3f5c);
+  } else if(theme === 'oldstreet'){
+    for(let x=10;x<W;x+=11 + rnd()*9){ const t = okGround(x); if(t !== null) pigeon(x, -1.3 - rnd()*.5); }
+    for(let x=6;x<W;x+=16 + rnd()*8){ const t = okGround(x); if(t !== null) banner(x, -2.2, pick([0xd94b4b, 0x3a7ad9, 0xf2a020])); }
+    for(let x=8;x<W;x+=14 + rnd()*8){ const t = okGround(x); if(t !== null) butterfly(x, t + 1.8 + rnd(), -.5, pick([0xffffff, 0xffd23f])); }
+    flock(0x5a4a5a);
+  } else if(theme === 'sky'){
+    for(let x=4;x<W;x+=7 + rnd()*6) balloon(x);
+    for(let x=10;x<W;x+=12 + rnd()*8) butterfly(x, 6 + rnd()*5, -1 + rnd()*2, pick([0xff9ad6, 0x8fd0ff, 0xffd23f]));
+    flock(0x6a6a9a); flock(0x6a6a9a); flock(0x6a6a9a);
+  } else if(theme === 'nightmarket'){
+    fireworks(['#ff6b9a','#ffd23f','#69c3ff','#7ef07a','#c9a8ff'], 2.6);
+    for(let x=6;x<W;x+=3.5 + rnd()*4) firefly(x, 4.5 + rnd()*4, -1.5 + rnd()*2, pick(['#fff3a0', '#b8ffb0']));
+    for(let x=10;x<W;x+=14 + rnd()*10){ const t = okGround(x); if(t !== null) banner(x, -2.4, pick([0xd94b4b, 0xffc94d])); }
+  } else if(theme === 'castle'){
+    flock(0x2a2440, true); flock(0x2a2440, true); flock(0x2a2440, true);
+    for(let x=6;x<W;x+=6 + rnd()*5){ const t = okGround(x); if(t !== null) candle(x, t + 2.5 + rnd()*2.5, -1.8 - rnd()*.8); }
+    for(let x=8;x<W;x+=5 + rnd()*5) firefly(x, 5 + rnd()*5, -1 + rnd()*2, pick(['#c9a8ff', '#8fd0ff']));
+    fireworks(['#c9a8ff','#ffd23f'], 7);
+  }
 }
 
 /* ───── 06_entities.js ───── */
@@ -2254,7 +2400,7 @@ let levelTime = 0, levelDeaths = 0, enemiesDefeated = 0, snacksFound = new Set()
 let respawnPt = null;
 let camX = 10, camY = 7, demoT = 0, shakeAmp = 0, hitStop = 0;
 function addShake(a){ shakeAmp = Math.max(shakeAmp, a); }
-const GRAV = 30, JUMP_V = 12.6, FLAP_V = 6.4, MAX_FALL = 16, PUFF_FALL = 2.6, WALK = 5.4, ACC = 42;
+const GRAV = 30, FALL_K = 1.55, JUMP_V = 12.6, JUMP2_V = 11.6, FLAP_V = 6.4, MAX_FALL = 21, PUFF_FALL = 2.6, WALK = 5.4, ACC = 42;
 
 function aabb(a, b){ return a.x - a.w/2 < b.x + b.w/2 && a.x + a.w/2 > b.x - b.w/2 && a.y < b.y + b.h && a.y + a.h > b.y; }
 const solidT = t => t===SOLID || t===BLOCK || t===METAL;
@@ -2346,12 +2492,23 @@ function createPlayer(x, y){
   umb.add(mesh(G.hemi, toon(0xff6b9a), .7,.38,.7, 0,0,0)); for(let i=0;i<4;i++){ const a = i/4*Math.PI*2+.4; umb.add(mesh(G.hemi, toon(0xffffff), .24,.1,.24, Math.cos(a)*.42,.2,Math.sin(a)*.42)); }
   umb.add(mesh(G.cyl, toon(0x6a4a3a), .025,.9,.025, 0,-.45,0)); addOutline(umb, .05); umb.visible = false; root.add(umb);
   scene.add(root);
+  if(P && P.orbs) P.orbs.forEach(o => o.parent && o.parent.remove(o));
   P = { x, y, vx:0, vy:0, w:.9, h:1.1, face:1, onGround:false, riding:null,
         hp:6, inv:0, puffed:false, mouth:null, ability:null, inhaling:false, inhaleArmed:false, inhaleSnd:0,
         stone:false, stoneT:0, atk:null, atkCD:0, breathT:0, swallowT:0, landT:0, t:0, dead:false, jumpHeld:false,
         speedT:0, floatT:0, airJumps:0, laserT:0, gliding:false, bubble:false, dashT:0, dashHit:null, pound:false, shieldUp:false, shieldT:0, spinT:0, emote:null, emoteT:0, idleT:0, walkPh:0,
-        root, turn, anim, modelHolder, model:null, hat:null, stoneMesh, slash, whip, armor, shield, bubbleMesh:bubble, hammer, umb };
+        root, turn, anim, modelHolder, model:null, hat:null, stoneMesh, slash, whip, armor, shield, bubbleMesh:bubble, hammer, umb, orbs:[], orbA:0, orbT:0, flipT:0 };
   attachPlayerModel();
+}
+function fishballMesh(){ const m = new THREE.Group(); m.add(mesh(G.sphere, toon(0xfbf6ea), .3,.28,.3)); m.add(mesh(G.sphereLo, toon(0xe8d8b8), .1,.04,.1, 0,.26,0)); return addOutline(m, .04); }
+function summonOrbs(){
+  for(let i=0;i<3;i++){ const m = fishballMesh(); world.add(m); P.orbs.push(m); }
+  P.orbT = 10; P.orbA = 0; sfx.ability(); burst(P.x, P.y + .7, ['#ffffff','#ffe9b0','#ff9a5a'], 18, 4, .3, .5);
+}
+function clearOrbs(fx){ for(const m of P.orbs){ if(fx) burst(m.position.x, m.position.y, ['#ffffff'], 5, 2); if(m.parent) m.parent.remove(m); } P.orbs.length = 0; }
+function launchOrbs(){
+  P.orbs.forEach((m, i) => { const s = spawnShot('fishball', m.position.x, m.position.y, P.face*14, (i - 1)*1.2, { friendly:true, dmg:3, life:1.1, r:.32, pierce:true }); });
+  clearOrbs(); P.throwT = .22; sfx.spit();
 }
 function mouthPos(){ return { x: P.x + P.face*0.5, y: P.y + Math.min(.75, P.mouthY || .55) }; }
 
@@ -2509,11 +2666,27 @@ function updatePlayer(dt, first){
     else if(ab === 'laser'){ if(p.atkCD <= 0){ fireLaser(); p.atkCD = .7; } }
     else if(ab === 'umbrella'){ if(p.atkCD <= 0){ startAttack('umbrella', .28); p.atkCD = .34; sfx.slash(); } }
     else if(ab === 'yoyo'){ if(p.atkCD <= 0 && !shots.some(s => s.kind === 'yoyo')){ const m = mouthPos(); spawnShot('yoyo', m.x, m.y, p.face*15, 0, { friendly:true, dmg:2, life:1.2, r:.32, boomerang:true, quick:true }); p.atkCD = .3; sfx.flap(); } }
+    else if(ab === 'guoshao'){ if(p.atkCD <= 0){ if(!p.orbs.length) summonOrbs(); else launchOrbs(); p.atkCD = .3; } }
     else if(ab === 'wangguo'){ p.shieldUp = true; p.shieldT = 0; }
     else if(!ab) p.inhaleArmed = true;
   }
   if(p.atkCD > cd0 && !p.atk && p.dashT <= 0 && p.spinT <= 0) p.throwT = .22;
   p.throwT = Math.max(0, (p.throwT || 0) - dt);
+  // 鍋燒意麵：魚丸繞著身體轉，碰到敵人會打、碰到子彈會擋掉
+  if(p.orbs.length){
+    if(ab !== 'guoshao') clearOrbs();
+    else {
+      p.orbT -= dt; p.orbA += dt*5.5;
+      p.orbs.forEach((m, i) => {
+        const a = p.orbA + i*Math.PI*2/p.orbs.length, ox = p.x + Math.cos(a)*1.3, oy = p.y + .7 + Math.sin(a)*1.05;
+        m.position.set(ox, oy, .4); m.rotation.y += dt*6;
+        if(p.orbT < 2) m.visible = Math.floor(p.orbT*8) % 2 === 0;
+        hitArea({ x:ox, y:oy - .32, w:.64, h:.64 }, 2, p.x, { tick:.35 });
+        for(const s of shots) if(!s.dead && !s.friendly && Math.hypot(s.x - ox, s.y - oy) < .55){ removeShot(s); burst(ox, oy, ['#ffffff','#ffe9b0'], 6, 2.5); sfx.pop(); }
+      });
+      if(p.orbT <= 0) clearOrbs(true);
+    }
+  }
   if(ab === 'wangguo' && p.shieldUp){
     p.shieldT += dt;
     if(!keys.atk){ p.shieldUp = false; if(p.shieldT > .12 && p.atkCD <= 0){ p.dashT = .22; p.dashHit = new Set(); p.atkCD = .5; sfx.hit(); } }
@@ -2536,14 +2709,18 @@ function updatePlayer(dt, first){
     else if(!p.mouth && !p.pound && (p.airJumps < 1 || p.floatT > 0 || ab === 'pengbing')){
       // 平常只能兩段跳；吃了棉花糖（或椪餅能力）才能一直飄
       p.airJumps++;
-      if(!p.puffed){ p.puffed = true; sfx.puff(); } p.vy = FLAP_V; sfx.flap(); burst(p.x - p.face*.3, p.y + .3, ['#ffffff'], 3, 2, .3, .35);
+      if(p.airJumps === 1 && !p.puffed){
+        // 第二段跳：跟第一段一樣有力，會翻一圈，不會鼓起來慢慢飄
+        p.vy = JUMP2_V; p.jumpHeld = true; p.flipT = .42; sfx.jump(); burst(p.x, p.y + .2, ['#ffffff','#fff3a0'], 8, 3, .28, .35);
+      } else { if(!p.puffed){ p.puffed = true; sfx.puff(); } p.vy = FLAP_V; sfx.flap(); burst(p.x - p.face*.3, p.y + .3, ['#ffffff'], 3, 2, .3, .35); }
     } else if(!p.mouth) sfx.deny();
   }
   if(!keys.jump && p.jumpHeld && p.vy > 0 && !p.puffed){ p.vy *= 0.5; p.jumpHeld = false; }
   if(p.pound){ p.vy = -22; p.vx = 0; }
   else if(p.puffed){ p.vy -= GRAV*0.42*dt; if(p.vy < -PUFF_FALL) p.vy = -PUFF_FALL; }
   else if(ab === 'umbrella' && keys.jump && p.vy < 0){ p.vy -= GRAV*.35*dt; if(p.vy < -2.2) p.vy = -2.2; p.gliding = true; }
-  else { p.vy -= GRAV*dt; if(p.vy < -MAX_FALL) p.vy = -MAX_FALL; }
+  else { p.vy -= GRAV*(p.vy < 0 ? FALL_K : 1)*dt; if(p.vy < -MAX_FALL) p.vy = -MAX_FALL; }
+  p.flipT = Math.max(0, p.flipT - dt);
   if(p.dashT > 0){ p.vx = p.face*(ab === 'wangguo' ? 9 : 12); if(p.vy < -2) p.vy = -2; if(Math.random() < .7) emit(p.x - p.face*.5, p.y + .3 + Math.random()*.5, 0, -p.face*2, 1, 0, .35, ab === 'wangguo' ? '#f6e7cc' : '#e7b06a', .22); }
 
   const wasGround = p.onGround;
@@ -2715,7 +2892,7 @@ function spawnEnemy(type, x, y, opt={}){
   scene.add(m);
   const e = { type, d, x, y, homeX:x, baseY:y, vx:0, vy:0, w:d.w, h:d.h, dir:opt.dir || -1, hp:d.hp, t:Math.random()*5,
               mesh:m, mats, ice, frozen:0, hurtT:0, tickCD:0, shootT:1.5+Math.random(), slashT:0, slashCD:0, pulled:false, onGround:false, dead:false,
-              blinkT:2 + Math.random()*3, hopT:1 + Math.random(), active: d.move !== 'drift', auraT:0, auraOn:0, kicked:false, minion:!!opt.minion };
+              blinkT:2 + Math.random()*3, hopT:1 + Math.random(), active: d.move !== 'drift', auraT:0, auraOn:0, kicked:false, minion:!!opt.minion, passive:!!opt.passive };
   enemies.push(e); return e;
 }
 function disposeEnemy(e){ scene.remove(e.mesh); e.mats.forEach(m => m.dispose()); e.ice.material.dispose(); }
@@ -2776,7 +2953,7 @@ function updateEnemy(e, dt){
   if(e.y < -4){ killQuiet(e); return; }
   if(P && !P.dead){
     const dxp = P.x - e.x, adx = Math.abs(dxp), ady = Math.abs(P.y - e.y);
-    if(e.type === 'flame'){ e.shootT -= dt; if(e.shootT <= 0 && adx < 7 && ady < 2.5){ e.dir = Math.sign(dxp) || 1; spawnShot('fireball', e.x + e.dir*.5, e.y + .5, e.dir*5, 0, { life:1.6, dmg:1, r:.22 }); e.shootT = 2.8; sfx.breath(); } }
+    if(e.type === 'flame' && !e.passive){ e.shootT -= dt; if(e.shootT <= 0 && adx < 7 && ady < 2.5){ e.dir = Math.sign(dxp) || 1; spawnShot('fireball', e.x + e.dir*.5, e.y + .5, e.dir*5, 0, { life:1.6, dmg:1, r:.22 }); e.shootT = 2.8; sfx.breath(); } }
     if(e.type === 'knight'){
       if(e.slashCD <= 0 && adx < 1.9 && ady < 1.3){ e.dir = Math.sign(dxp) || 1; e.slashT = .3; e.slashCD = 1.7; sfx.slash(); }
       if(e.slashT > 0){ e.slashT -= dt; if(aabb({ x:e.x + e.dir*.9, w:1.2, y:e.y, h:1.1 }, P)) hurtPlayer(e.x); }
@@ -2861,6 +3038,7 @@ function spawnShot(kind, x, y, vx, vy, opt={}){
   else if(kind === 'wave'){ m = mesh(G.cone, toon(0xffb02e,{ emissive:0xaa4400 }), .3,.7,.3); }
   else if(kind === 'shuriken' || kind === 'shurikenH'){ m = new THREE.Group(); const c = kind === 'shuriken' ? 0xcfd6e6 : 0x5a5f7a; m.add(mesh(G.box, toon(c), .55,.14,.06)); m.add(mesh(G.box, toon(c), .14,.55,.06)); addc(m, mesh(G.cyl, toon(0x3a3f5c), .08,.08,.08)).rotation.x = Math.PI/2; }
   else if(kind === 'arrow' || kind === 'arrowH'){ m = new THREE.Group(); const sh = mesh(G.cyl, toon(0x9a6a3a), .03,.8,.03); sh.rotation.z = Math.PI/2; m.add(sh); const hd = mesh(G.cone, toon(0xcfd6e6), .08,.2,.08, .45,0,0); hd.rotation.z = -Math.PI/2; m.add(hd); m.add(mesh(G.box, toon(kind === 'arrow' ? 0xff6b6b : 0x6a3a9a), .16,.14,.02, -.36,0,0)); }
+  else if(kind === 'fishball'){ m = new THREE.Group(); m.add(mesh(G.sphere, toon(0xfbf6ea), .3,.28,.3)); m.add(mesh(G.sphereLo, toon(0xe8d8b8), .1,.04,.1, 0,.26,0)); }
   else if(kind === 'yoyo'){ m = new THREE.Group(); for(const z of [-.06,.06]){ const d = mesh(G.cyl, toon(0xff6b9a), .24,.07,.24, 0,0,z); d.rotation.x = Math.PI/2; m.add(d); } }
   if(kind !== 'puff' && kind !== 'wind') addOutline(m, .04);
   scene.add(m);
@@ -3289,7 +3467,10 @@ function animatePlayer(dt){
   else if(mode === 'dance' || mode === 'win'){ by = Math.abs(Math.sin(p.t*8))*.12; }
   _sc.set(sx, sy, sz);
   p.anim.scale.lerp(_sc, Math.min(1, dt*18));
-  p.anim.position.y = damp(p.anim.position.y, by, 18, dt);
+  p.animBY = damp(p.animBY || 0, by, 18, dt); p.anim.position.y = p.animBY;
+  // 二段跳翻一圈（繞身體中心轉）
+  if(p.flipT > 0){ const th = -p.face*(1 - p.flipT/.42)*Math.PI*2, hh = CHAR_H*.45; p.anim.rotation.z = th; p.anim.position.x = Math.sin(th)*hh; p.anim.position.y += hh*(1 - Math.cos(th)); }
+  else { p.anim.rotation.z = 0; p.anim.position.x = 0; }
   if(p.model){
     const k = p.atk ? p.atk.t/p.atk.dur : (p.throwT > 0 ? 1 - p.throwT/.22 : 0);
     animateRig(p.model, { mode, t:p.t, phase:p.walkPh, k }, dt);
@@ -3418,6 +3599,7 @@ function animateWorld(dt){
     setFlash(b.mats, b.hurtT > .1 || (b.st === 'tele' && Math.sin(b.t*30) > 0));
   }
   for(const f of flickers){
+    if(f.fn){ if(!f.always && Math.abs(f.cx - camX) > 34) continue; f.t += dt; f.fn(f, dt); continue; }
     f.t += dt;
     if(f.sway) f.o.rotation.z = Math.sin(f.t*1.5)*.08;
     if(f.bob) f.o.position.y += Math.sin(f.t*1.2)*f.bob*dt;

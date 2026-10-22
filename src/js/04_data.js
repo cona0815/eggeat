@@ -26,6 +26,7 @@ const ABIL = {
   eel:     { name:'鱔魚旋風', snack:true, icon:'🌀', color:0x7a4a2a, css:'#8a5a32', hint:'按 J 原地旋轉，捲走四周敵人' },
   oyster:  { name:'蚵仔煎飛盤',snack:true, icon:'🥏', color:0xf2d36b, css:'#d4a82a', hint:'按 J 丟出會飛回來的蚵仔煎' },
   zongzi:  { name:'粽子大鎚', snack:true, icon:'🔨', color:0x5a9a3a, css:'#4f8a32', hint:'按 J 大鎚重擊，打碎鐵塊' },
+  guoshao: { name:'魚丸護衛', snack:true, icon:'🍢', color:0xfbf0d8, css:'#d9a441', hint:'按 J 叫出 3 顆魚丸繞著你轉，再按 J 射出去' },
   pengbing:{ name:'椪餅膨膨', snack:true, icon:'🫓', color:0xe2b066, css:'#c98f3a', hint:'按 J 膨脹放出衝擊波' },
 };
 const COPY_ABILITIES = ['fire','ice','sword','rock','spark','bomb','shuriken','arrow','laser','umbrella','yoyo'];
@@ -46,13 +47,14 @@ const SNACKS = {
   oyster:     { name:'蚵仔煎',   type:'ability', fact:'新鮮的蚵仔加上地瓜粉漿和蛋一起煎，起鍋前淋上甜辣醬，是夜市常客。' },
   zongzi:     { name:'菜粽',     type:'ability', fact:'台南的菜粽用花生和糯米包成，吃的時候撒上花生粉，常配一碗味噌湯。' },
   pengbing:   { name:'椪餅',     type:'ability', fact:'又叫「膨餅」，中間是空心的。傳統上可以敲開一個洞，打蛋進去用麻油煎。' },
+  guoshao:    { name:'鍋燒意麵', type:'ability', fact:'台南人很愛的宵夜。小鍋子裡煮著油炸過的意麵，加上魚丸、蝦子、蛋和青菜，熱呼呼一鍋。' },
   beef:       { name:'牛肉湯',   type:'heal', heal:6, fact:'台南人的早餐好朋友。生牛肉片用滾燙的湯一沖就熟，又嫩又鮮。吃了體力全滿，還會跑更快！' },
   almond:     { name:'杏仁茶',   type:'heal', heal:1, fact:'用杏仁磨漿煮成的熱飲，常搭配油條一起吃。喝了會產生護身泡泡，擋下一次傷害。' },
   wintermelon:{ name:'冬瓜茶',   type:'heal', heal:2, fact:'用冬瓜和糖熬煮成的古早味飲料，台南有開了很多年的老店。喝了補 2 格體力。' },
   shrimprice: { name:'蝦仁飯',   type:'heal', heal:3, fact:'台南特色小吃，用蝦仁和醬汁拌炒出香噴噴的米飯，常配一顆半熟鴨蛋。補 3 格體力。' },
   migao:      { name:'米糕',     type:'heal', heal:4, fact:'蒸好的糯米飯鋪上肉燥、魚鬆和小黃瓜片，是台南人愛吃的點心。補 4 格體力。' },
 };
-const SNACK_ORDER = ['noodle','shrimp','coffin','douhua','fish','wangguo','mango','rouyuan','eel','oyster','zongzi','pengbing','beef','almond','wintermelon','shrimprice','migao'];
+const SNACK_ORDER = ['noodle','shrimp','coffin','douhua','fish','wangguo','mango','rouyuan','eel','oyster','zongzi','pengbing','guoshao','beef','almond','wintermelon','shrimprice','migao'];
 
 /* 小吃模型：以 3dcar 的 envFood 為基礎改成卡通材質（原單位約半徑 5，最後統一縮放） */
 const _snackCache = new Map();
@@ -148,6 +150,15 @@ function snackModel(kind){
       add(new THREE.SphereGeometry(1.1,12,8), M(0xfff6e6), 2.6,1.6,1).scale.y = .5;
       add(new THREE.SphereGeometry(.55,10,8), M(0xf2a020), 2.6,1.95,1).scale.y = .5;
       scallion(4, 2, 1.2); break;
+    case 'guoshao':
+      add(new THREE.CylinderGeometry(4.6,4,3.2,24), M(0x4a4a58), 0,-1.2,0);
+      for(const sx of [-1,1]) add(new THREE.TorusGeometry(.9,.3,6,12), M(0x3a3a46), sx*4.9,-.2,0).rotation.y = Math.PI/2;
+      add(new THREE.CylinderGeometry(4.3,4.3,.2,24), M(0xd9a35a), 0,.35,0);
+      for(let k=0;k<4;k++) add(new THREE.TorusGeometry(1.2+k*.55,.2,5,18), M(0xf2cf7a), 0,.5,0).rotation.x = Math.PI/2;
+      for(const [x,z] of [[-1.8,1.2],[1.6,1.4],[.2,-2]]) add(new THREE.SphereGeometry(.85,12,8), M(0xfbf6ea), x,1,z);
+      add(new THREE.SphereGeometry(1.2,12,8), M(0xfff6e6), 1.9,.8,-.9).scale.y = .45; add(new THREE.SphereGeometry(.55,10,8), M(0xf2a020), 1.9,1.05,-.9).scale.y = .5;
+      add(new THREE.TorusGeometry(.7,.3,6,12,Math.PI*1.3), M(0xff8a5a), -1.4,1,-1.4).rotation.x = -Math.PI/2;
+      scallion(5, .75, 2.6); break;
     case 'migao':
       add(new THREE.CylinderGeometry(3.4,3,3.4,20), M(0xcfd6de), 0,-1.2,0);
       add(new THREE.SphereGeometry(3.2,16,10), M(0xa8743c), 0,.6,0).scale.y = .4;
@@ -412,9 +423,9 @@ const LEVELS = [
       g.ground(0,30,3);
       g.sign(3,3,'← → 移動，空白鍵跳'); g.stars(7,10,5);
       g.sign(12,3,'按住 J 把敵人吸進嘴裡，再按 J 吐出星星！'); g.enemy('acorn',17,3); g.enemy('acorn',25,3);
-      g.sign(28,3,'在空中再按跳，會鼓起來飄喔');
+      g.sign(28,3,'在空中再按一次跳，可以二段跳！');
       g.ground(34,64,3); g.box(42,45,3,4);
-      g.sign(36,3,'吸住火球怪後按 ↓ 吞下去，就能複製火焰！'); g.enemy('flame',39,3);
+      g.sign(36,3,'吸住火球怪後按 ↓ 吞下去，就能複製火焰！'); g.enemy('flame',39,3,{ passive:true });
       g.plat(48,52,7); g.stars(48,52,8); g.enemy('bird',54,8.5);
       g.sign(57,3,'吃台南小吃會得到特別能力！'); g.item('noodle',60,3);
       g.ground(68,100,3); g.enemy('acorn',72,3); g.enemy('knight',80,3);
@@ -423,7 +434,7 @@ const LEVELS = [
       g.item('cotton',110,3); g.spring(112,3); g.plat(114,120,10); g.stars(114,120,11); g.item('wintermelon',121,11);
       g.enemy('frog',124,3); g.box(128,131,3,4); g.box(132,135,3,6); g.enemy('rocky',133,7);
       g.mover(140,5.5,3, 6,0, 1.6);
-      g.ground(151,199,3); g.enemy('bird',157,8); g.enemy('yoyokid',162,3); g.item('beef',166,3);
+      g.ground(151,199,3); g.sign(153,3,'鍋燒意麵：叫出魚丸繞著你轉，再按 J 射出去'); g.item('guoshao',155,3); g.enemy('bird',159,8); g.enemy('yoyokid',162,3); g.item('beef',166,3);
       g.enemy('flame',172,3); g.stars(174,178,5); g.enemy('bomber',182,3); g.metal(187,187,3,5); g.stars(188,190,4);
       g.door(195,3);
   }},
@@ -447,7 +458,7 @@ const LEVELS = [
       g.mover(70,5,3, 0,4, 1.2); g.plat(76,79,7);
       g.ground(82,104,3); g.checkpoint(84,3); g.item('fish',88,3); g.spikes(92,95,3); g.plat(91,96,6); g.enemy('knight',100,3);
       g.mover(106,5,3, 7,0, 1.8); g.enemy('spiky',109,8); g.enemy('bird',112,9);
-      g.ground(117,140,3); g.enemy('rocky',121,3); g.enemy('ninja',126,3); g.item('almond',133,3); g.enemy('spark',137,3);
+      g.ground(117,140,3); g.enemy('rocky',121,3); g.enemy('ninja',126,3); g.item('guoshao',129,3); g.item('almond',133,3); g.enemy('spark',137,3);
       g.box(141,143,0,5); g.stars(141,143,7);
       g.ground(144,170,3); g.checkpoint(146,3); g.enemy('parasol',152,14); g.enemy('bomber',158,3); g.item('beef',163,3);
       g.mover(172,4.5,3, 0,5, 1.3); g.plat(176,180,9); g.stars(176,180,10); g.enemy('spiky',183,7);
@@ -455,7 +466,7 @@ const LEVELS = [
   }},
   { name:'花園夜市', theme:'nightmarket', width:222, par:200, build(g){
       g.ground(0,36,3); g.enemy('ghost',14,4); g.item('rouyuan',20,3); g.enemy('flame',27,3); g.stars(30,34,5);
-      g.ground(40,72,3); g.enemy('bomber',46,3); g.plat(50,56,6); g.stars(50,56,7); g.item('eel',58,3); g.enemy('frog',62,3);
+      g.ground(40,72,3); g.enemy('bomber',46,3); g.plat(50,56,6); g.stars(50,56,7); g.item('eel',58,3); g.enemy('frog',62,3); g.item('guoshao',66,3);
       g.enemy('cannon',70,3,{ dir:-1 }); g.mover(73,4.5,3, 4,0, 1.5);
       g.ground(82,118,3); g.checkpoint(84,3); g.enemy('ghost',92,5); g.item('coffin',96,3); g.metal(102,102,3,5);
       g.enemy('laserbot',107,3); g.spikes(112,114,3); g.plat(111,115,6); g.item('migao',113,7);

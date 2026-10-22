@@ -10,7 +10,7 @@ let levelTime = 0, levelDeaths = 0, enemiesDefeated = 0, snacksFound = new Set()
 let respawnPt = null;
 let camX = 10, camY = 7, demoT = 0, shakeAmp = 0, hitStop = 0;
 function addShake(a){ shakeAmp = Math.max(shakeAmp, a); }
-const GRAV = 30, JUMP_V = 12.6, FLAP_V = 6.4, MAX_FALL = 16, PUFF_FALL = 2.6, WALK = 5.4, ACC = 42;
+const GRAV = 30, FALL_K = 1.55, JUMP_V = 12.6, JUMP2_V = 11.6, FLAP_V = 6.4, MAX_FALL = 21, PUFF_FALL = 2.6, WALK = 5.4, ACC = 42;
 
 function aabb(a, b){ return a.x - a.w/2 < b.x + b.w/2 && a.x + a.w/2 > b.x - b.w/2 && a.y < b.y + b.h && a.y + a.h > b.y; }
 const solidT = t => t===SOLID || t===BLOCK || t===METAL;
@@ -102,12 +102,23 @@ function createPlayer(x, y){
   umb.add(mesh(G.hemi, toon(0xff6b9a), .7,.38,.7, 0,0,0)); for(let i=0;i<4;i++){ const a = i/4*Math.PI*2+.4; umb.add(mesh(G.hemi, toon(0xffffff), .24,.1,.24, Math.cos(a)*.42,.2,Math.sin(a)*.42)); }
   umb.add(mesh(G.cyl, toon(0x6a4a3a), .025,.9,.025, 0,-.45,0)); addOutline(umb, .05); umb.visible = false; root.add(umb);
   scene.add(root);
+  if(P && P.orbs) P.orbs.forEach(o => o.parent && o.parent.remove(o));
   P = { x, y, vx:0, vy:0, w:.9, h:1.1, face:1, onGround:false, riding:null,
         hp:6, inv:0, puffed:false, mouth:null, ability:null, inhaling:false, inhaleArmed:false, inhaleSnd:0,
         stone:false, stoneT:0, atk:null, atkCD:0, breathT:0, swallowT:0, landT:0, t:0, dead:false, jumpHeld:false,
         speedT:0, floatT:0, airJumps:0, laserT:0, gliding:false, bubble:false, dashT:0, dashHit:null, pound:false, shieldUp:false, shieldT:0, spinT:0, emote:null, emoteT:0, idleT:0, walkPh:0,
-        root, turn, anim, modelHolder, model:null, hat:null, stoneMesh, slash, whip, armor, shield, bubbleMesh:bubble, hammer, umb };
+        root, turn, anim, modelHolder, model:null, hat:null, stoneMesh, slash, whip, armor, shield, bubbleMesh:bubble, hammer, umb, orbs:[], orbA:0, orbT:0, flipT:0 };
   attachPlayerModel();
+}
+function fishballMesh(){ const m = new THREE.Group(); m.add(mesh(G.sphere, toon(0xfbf6ea), .3,.28,.3)); m.add(mesh(G.sphereLo, toon(0xe8d8b8), .1,.04,.1, 0,.26,0)); return addOutline(m, .04); }
+function summonOrbs(){
+  for(let i=0;i<3;i++){ const m = fishballMesh(); world.add(m); P.orbs.push(m); }
+  P.orbT = 10; P.orbA = 0; sfx.ability(); burst(P.x, P.y + .7, ['#ffffff','#ffe9b0','#ff9a5a'], 18, 4, .3, .5);
+}
+function clearOrbs(fx){ for(const m of P.orbs){ if(fx) burst(m.position.x, m.position.y, ['#ffffff'], 5, 2); if(m.parent) m.parent.remove(m); } P.orbs.length = 0; }
+function launchOrbs(){
+  P.orbs.forEach((m, i) => { const s = spawnShot('fishball', m.position.x, m.position.y, P.face*14, (i - 1)*1.2, { friendly:true, dmg:3, life:1.1, r:.32, pierce:true }); });
+  clearOrbs(); P.throwT = .22; sfx.spit();
 }
 function mouthPos(){ return { x: P.x + P.face*0.5, y: P.y + Math.min(.75, P.mouthY || .55) }; }
 
@@ -265,11 +276,27 @@ function updatePlayer(dt, first){
     else if(ab === 'laser'){ if(p.atkCD <= 0){ fireLaser(); p.atkCD = .7; } }
     else if(ab === 'umbrella'){ if(p.atkCD <= 0){ startAttack('umbrella', .28); p.atkCD = .34; sfx.slash(); } }
     else if(ab === 'yoyo'){ if(p.atkCD <= 0 && !shots.some(s => s.kind === 'yoyo')){ const m = mouthPos(); spawnShot('yoyo', m.x, m.y, p.face*15, 0, { friendly:true, dmg:2, life:1.2, r:.32, boomerang:true, quick:true }); p.atkCD = .3; sfx.flap(); } }
+    else if(ab === 'guoshao'){ if(p.atkCD <= 0){ if(!p.orbs.length) summonOrbs(); else launchOrbs(); p.atkCD = .3; } }
     else if(ab === 'wangguo'){ p.shieldUp = true; p.shieldT = 0; }
     else if(!ab) p.inhaleArmed = true;
   }
   if(p.atkCD > cd0 && !p.atk && p.dashT <= 0 && p.spinT <= 0) p.throwT = .22;
   p.throwT = Math.max(0, (p.throwT || 0) - dt);
+  // 鍋燒意麵：魚丸繞著身體轉，碰到敵人會打、碰到子彈會擋掉
+  if(p.orbs.length){
+    if(ab !== 'guoshao') clearOrbs();
+    else {
+      p.orbT -= dt; p.orbA += dt*5.5;
+      p.orbs.forEach((m, i) => {
+        const a = p.orbA + i*Math.PI*2/p.orbs.length, ox = p.x + Math.cos(a)*1.3, oy = p.y + .7 + Math.sin(a)*1.05;
+        m.position.set(ox, oy, .4); m.rotation.y += dt*6;
+        if(p.orbT < 2) m.visible = Math.floor(p.orbT*8) % 2 === 0;
+        hitArea({ x:ox, y:oy - .32, w:.64, h:.64 }, 2, p.x, { tick:.35 });
+        for(const s of shots) if(!s.dead && !s.friendly && Math.hypot(s.x - ox, s.y - oy) < .55){ removeShot(s); burst(ox, oy, ['#ffffff','#ffe9b0'], 6, 2.5); sfx.pop(); }
+      });
+      if(p.orbT <= 0) clearOrbs(true);
+    }
+  }
   if(ab === 'wangguo' && p.shieldUp){
     p.shieldT += dt;
     if(!keys.atk){ p.shieldUp = false; if(p.shieldT > .12 && p.atkCD <= 0){ p.dashT = .22; p.dashHit = new Set(); p.atkCD = .5; sfx.hit(); } }
@@ -292,14 +319,18 @@ function updatePlayer(dt, first){
     else if(!p.mouth && !p.pound && (p.airJumps < 1 || p.floatT > 0 || ab === 'pengbing')){
       // 平常只能兩段跳；吃了棉花糖（或椪餅能力）才能一直飄
       p.airJumps++;
-      if(!p.puffed){ p.puffed = true; sfx.puff(); } p.vy = FLAP_V; sfx.flap(); burst(p.x - p.face*.3, p.y + .3, ['#ffffff'], 3, 2, .3, .35);
+      if(p.airJumps === 1 && !p.puffed){
+        // 第二段跳：跟第一段一樣有力，會翻一圈，不會鼓起來慢慢飄
+        p.vy = JUMP2_V; p.jumpHeld = true; p.flipT = .42; sfx.jump(); burst(p.x, p.y + .2, ['#ffffff','#fff3a0'], 8, 3, .28, .35);
+      } else { if(!p.puffed){ p.puffed = true; sfx.puff(); } p.vy = FLAP_V; sfx.flap(); burst(p.x - p.face*.3, p.y + .3, ['#ffffff'], 3, 2, .3, .35); }
     } else if(!p.mouth) sfx.deny();
   }
   if(!keys.jump && p.jumpHeld && p.vy > 0 && !p.puffed){ p.vy *= 0.5; p.jumpHeld = false; }
   if(p.pound){ p.vy = -22; p.vx = 0; }
   else if(p.puffed){ p.vy -= GRAV*0.42*dt; if(p.vy < -PUFF_FALL) p.vy = -PUFF_FALL; }
   else if(ab === 'umbrella' && keys.jump && p.vy < 0){ p.vy -= GRAV*.35*dt; if(p.vy < -2.2) p.vy = -2.2; p.gliding = true; }
-  else { p.vy -= GRAV*dt; if(p.vy < -MAX_FALL) p.vy = -MAX_FALL; }
+  else { p.vy -= GRAV*(p.vy < 0 ? FALL_K : 1)*dt; if(p.vy < -MAX_FALL) p.vy = -MAX_FALL; }
+  p.flipT = Math.max(0, p.flipT - dt);
   if(p.dashT > 0){ p.vx = p.face*(ab === 'wangguo' ? 9 : 12); if(p.vy < -2) p.vy = -2; if(Math.random() < .7) emit(p.x - p.face*.5, p.y + .3 + Math.random()*.5, 0, -p.face*2, 1, 0, .35, ab === 'wangguo' ? '#f6e7cc' : '#e7b06a', .22); }
 
   const wasGround = p.onGround;
@@ -471,7 +502,7 @@ function spawnEnemy(type, x, y, opt={}){
   scene.add(m);
   const e = { type, d, x, y, homeX:x, baseY:y, vx:0, vy:0, w:d.w, h:d.h, dir:opt.dir || -1, hp:d.hp, t:Math.random()*5,
               mesh:m, mats, ice, frozen:0, hurtT:0, tickCD:0, shootT:1.5+Math.random(), slashT:0, slashCD:0, pulled:false, onGround:false, dead:false,
-              blinkT:2 + Math.random()*3, hopT:1 + Math.random(), active: d.move !== 'drift', auraT:0, auraOn:0, kicked:false, minion:!!opt.minion };
+              blinkT:2 + Math.random()*3, hopT:1 + Math.random(), active: d.move !== 'drift', auraT:0, auraOn:0, kicked:false, minion:!!opt.minion, passive:!!opt.passive };
   enemies.push(e); return e;
 }
 function disposeEnemy(e){ scene.remove(e.mesh); e.mats.forEach(m => m.dispose()); e.ice.material.dispose(); }
@@ -532,7 +563,7 @@ function updateEnemy(e, dt){
   if(e.y < -4){ killQuiet(e); return; }
   if(P && !P.dead){
     const dxp = P.x - e.x, adx = Math.abs(dxp), ady = Math.abs(P.y - e.y);
-    if(e.type === 'flame'){ e.shootT -= dt; if(e.shootT <= 0 && adx < 7 && ady < 2.5){ e.dir = Math.sign(dxp) || 1; spawnShot('fireball', e.x + e.dir*.5, e.y + .5, e.dir*5, 0, { life:1.6, dmg:1, r:.22 }); e.shootT = 2.8; sfx.breath(); } }
+    if(e.type === 'flame' && !e.passive){ e.shootT -= dt; if(e.shootT <= 0 && adx < 7 && ady < 2.5){ e.dir = Math.sign(dxp) || 1; spawnShot('fireball', e.x + e.dir*.5, e.y + .5, e.dir*5, 0, { life:1.6, dmg:1, r:.22 }); e.shootT = 2.8; sfx.breath(); } }
     if(e.type === 'knight'){
       if(e.slashCD <= 0 && adx < 1.9 && ady < 1.3){ e.dir = Math.sign(dxp) || 1; e.slashT = .3; e.slashCD = 1.7; sfx.slash(); }
       if(e.slashT > 0){ e.slashT -= dt; if(aabb({ x:e.x + e.dir*.9, w:1.2, y:e.y, h:1.1 }, P)) hurtPlayer(e.x); }
@@ -617,6 +648,7 @@ function spawnShot(kind, x, y, vx, vy, opt={}){
   else if(kind === 'wave'){ m = mesh(G.cone, toon(0xffb02e,{ emissive:0xaa4400 }), .3,.7,.3); }
   else if(kind === 'shuriken' || kind === 'shurikenH'){ m = new THREE.Group(); const c = kind === 'shuriken' ? 0xcfd6e6 : 0x5a5f7a; m.add(mesh(G.box, toon(c), .55,.14,.06)); m.add(mesh(G.box, toon(c), .14,.55,.06)); addc(m, mesh(G.cyl, toon(0x3a3f5c), .08,.08,.08)).rotation.x = Math.PI/2; }
   else if(kind === 'arrow' || kind === 'arrowH'){ m = new THREE.Group(); const sh = mesh(G.cyl, toon(0x9a6a3a), .03,.8,.03); sh.rotation.z = Math.PI/2; m.add(sh); const hd = mesh(G.cone, toon(0xcfd6e6), .08,.2,.08, .45,0,0); hd.rotation.z = -Math.PI/2; m.add(hd); m.add(mesh(G.box, toon(kind === 'arrow' ? 0xff6b6b : 0x6a3a9a), .16,.14,.02, -.36,0,0)); }
+  else if(kind === 'fishball'){ m = new THREE.Group(); m.add(mesh(G.sphere, toon(0xfbf6ea), .3,.28,.3)); m.add(mesh(G.sphereLo, toon(0xe8d8b8), .1,.04,.1, 0,.26,0)); }
   else if(kind === 'yoyo'){ m = new THREE.Group(); for(const z of [-.06,.06]){ const d = mesh(G.cyl, toon(0xff6b9a), .24,.07,.24, 0,0,z); d.rotation.x = Math.PI/2; m.add(d); } }
   if(kind !== 'puff' && kind !== 'wind') addOutline(m, .04);
   scene.add(m);

@@ -43,7 +43,10 @@ function animatePlayer(dt){
   else if(mode === 'dance' || mode === 'win'){ by = Math.abs(Math.sin(p.t*8))*.12; }
   _sc.set(sx, sy, sz);
   p.anim.scale.lerp(_sc, Math.min(1, dt*18));
-  p.anim.position.y = damp(p.anim.position.y, by, 18, dt);
+  p.animBY = damp(p.animBY || 0, by, 18, dt); p.anim.position.y = p.animBY;
+  // 二段跳翻一圈（繞身體中心轉）
+  if(p.flipT > 0){ const th = -p.face*(1 - p.flipT/.42)*Math.PI*2, hh = CHAR_H*.45; p.anim.rotation.z = th; p.anim.position.x = Math.sin(th)*hh; p.anim.position.y += hh*(1 - Math.cos(th)); }
+  else { p.anim.rotation.z = 0; p.anim.position.x = 0; }
   if(p.model){
     const k = p.atk ? p.atk.t/p.atk.dur : (p.throwT > 0 ? 1 - p.throwT/.22 : 0);
     animateRig(p.model, { mode, t:p.t, phase:p.walkPh, k }, dt);
@@ -172,6 +175,7 @@ function animateWorld(dt){
     setFlash(b.mats, b.hurtT > .1 || (b.st === 'tele' && Math.sin(b.t*30) > 0));
   }
   for(const f of flickers){
+    if(f.fn){ if(!f.always && Math.abs(f.cx - camX) > 34) continue; f.t += dt; f.fn(f, dt); continue; }
     f.t += dt;
     if(f.sway) f.o.rotation.z = Math.sin(f.t*1.5)*.08;
     if(f.bob) f.o.position.y += Math.sin(f.t*1.2)*f.bob*dt;
