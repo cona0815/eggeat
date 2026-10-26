@@ -10,7 +10,7 @@ let levelTime = 0, levelDeaths = 0, enemiesDefeated = 0, snacksFound = new Set()
 let respawnPt = null;
 let camX = 10, camY = 7, demoT = 0, shakeAmp = 0, hitStop = 0;
 function addShake(a){ shakeAmp = Math.max(shakeAmp, a); }
-const GRAV = 30, FALL_K = 1.55, JUMP_V = 12.6, JUMP2_V = 11.6, FLAP_V = 6.4, MAX_FALL = 21, PUFF_FALL = 2.6, WALK = 5.4, ACC = 42;
+const GRAV = 30, FALL_K = 1.55, JUMP_V = 12.6, JUMP2_V = 13.2, FLAP_V = 6.4, MAX_FALL = 21, PUFF_FALL = 2.6, WALK = 5.4, ACC = 42;
 
 function aabb(a, b){ return a.x - a.w/2 < b.x + b.w/2 && a.x + a.w/2 > b.x - b.w/2 && a.y < b.y + b.h && a.y + a.h > b.y; }
 const solidT = t => t===SOLID || t===BLOCK || t===METAL;
@@ -187,7 +187,6 @@ function hurtPlayer(srcX, dmg=1){
   P.hp -= dmg; P.inv = 1.6;
   P.vx = (P.x < srcX ? -1 : 1) * 6; P.vy = 6;
   P.puffed = false; P.mouth = null; P.inhaling = false; P.atk = null; P.shieldUp = false;
-  if(P.ability) loseAbility();
   sfx.hurt(); burst(P.x, P.y+.5, ['#ff6b6b','#ffffff'], 12, 4); addShake(.28); hitStop = Math.max(hitStop, .1);
   updateHUD(true);
   if(P.hp <= 0) killPlayer();
@@ -321,7 +320,7 @@ function updatePlayer(dt, first){
       p.airJumps++;
       if(p.airJumps === 1 && !p.puffed){
         // 第二段跳：跟第一段一樣有力，會翻一圈，不會鼓起來慢慢飄
-        p.vy = JUMP2_V; p.jumpHeld = true; p.flipT = .42; sfx.jump(); burst(p.x, p.y + .2, ['#ffffff','#fff3a0'], 8, 3, .28, .35);
+        p.vy = JUMP2_V; p.jumpHeld = false; p.flipT = .42; sfx.jump(); burst(p.x, p.y + .2, ['#ffffff','#fff3a0'], 8, 3, .28, .35);
       } else { if(!p.puffed){ p.puffed = true; sfx.puff(); } p.vy = FLAP_V; sfx.flap(); burst(p.x - p.face*.3, p.y + .3, ['#ffffff'], 3, 2, .3, .35); }
     } else if(!p.mouth) sfx.deny();
   }

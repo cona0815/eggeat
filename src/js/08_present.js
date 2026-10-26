@@ -133,7 +133,7 @@ function animateWorld(dt){
     else if(SNACKS[it.type]){ m.position.set(it.x, it.y + .1 + (it.drop && !it.landed ? 0 : Math.sin(now*3 + it.x)*.07), 0); m.children[0].rotation.y = it.drop && !it.landed ? now*5 : Math.sin(now*1.4 + it.x)*.6;
       if(it.drop) m.visible = it.life > 2.5 || Math.floor(it.life*8)%2 === 0;
       if(Math.random() < .05) emit(it.x + (Math.random()-.5)*.3, it.y + .8, .2, 0, 1.2, 0, .8, '#ffffff', .2); }
-    else { m.position.set(it.x, it.y + Math.sin(now*3)*.06, 0); m.rotation.y = now*1.5; }
+    else { m.position.set(it.x, it.y + Math.sin(now*3)*.06, 0); m.rotation.y = now*1.5; if(it.drop) m.visible = it.life > 2.5 || Math.floor(it.life*8)%2 === 0; }
   }
   for(const s of shots){
     if(s.dead) continue;

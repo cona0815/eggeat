@@ -420,7 +420,7 @@ const THEMES = {
 
 const LEVELS = [
   { name:'蒲公英草原', theme:'meadow', width:200, par:150, build(g){
-      g.ground(0,30,3);
+      g.ground(0,199,3);   // v2.4 第一關不要有洞
       g.sign(3,3,'← → 移動，空白鍵跳'); g.stars(7,10,5);
       g.sign(12,3,'按住 J 把敵人吸進嘴裡，再按 J 吐出星星！'); g.enemy('acorn',17,3); g.enemy('acorn',25,3);
       g.sign(28,3,'在空中再按一次跳，可以二段跳！');
@@ -433,16 +433,15 @@ const LEVELS = [
       g.ground(104,138,3); g.checkpoint(107,3);
       g.item('cotton',110,3); g.spring(112,3); g.plat(114,120,10); g.stars(114,120,11); g.item('wintermelon',121,11);
       g.enemy('frog',124,3); g.box(128,131,3,4); g.box(132,135,3,6); g.enemy('rocky',133,7);
-      g.mover(140,5.5,3, 6,0, 1.6);
       g.ground(151,199,3); g.sign(153,3,'鍋燒意麵：叫出魚丸繞著你轉，再按 J 射出去'); g.item('guoshao',155,3); g.enemy('bird',159,8); g.enemy('yoyokid',162,3); g.item('beef',166,3);
       g.enemy('flame',172,3); g.stars(174,178,5); g.enemy('bomber',182,3); g.metal(187,187,3,5); g.stars(188,190,4);
       g.door(195,3);
   }},
   { name:'安平老街', theme:'oldstreet', width:212, par:190, build(g){
-      g.ground(0,40,3); g.enemy('knight',12,3); g.enemy('acorn',20,3); g.item('shrimp',26,3);
+      g.ground(0,211,3); g.enemy('knight',12,3);   // v2.4 第二關不要有洞 g.enemy('acorn',20,3); g.item('shrimp',26,3);
       g.sign(24,3,'安平蝦捲：發射會追著敵人跑的蝦捲'); g.blocks(32,33,3,5); g.enemy('spark',37,3);
       g.ground(44,70,3); g.box(50,53,3,5); g.plat(55,62,8); g.stars(55,62,9); g.enemy('bomber',58,9);
-      g.enemy('ninja',63,3); g.enemy('cannon',67,3,{ dir:-1 }); g.mover(71,4.5,3, 3,0, 1.4);
+      g.enemy('ninja',63,3); g.enemy('cannon',67,3,{ dir:-1 });
       g.ground(78,110,3); g.checkpoint(80,3); g.item('douhua',85,3); g.enemy('frog',90,3);
       g.spikes(96,98,3); g.plat(95,99,6); g.stars(95,99,7); g.enemy('parasol',104,12); g.item('oyster',108,3);
       g.ground(112,150,3); g.enemy('bomber',116,3); g.sign(118,3,'鐵塊要用炸彈或大鎚才打得破'); g.metal(121,122,3,5); g.stars(121,122,7);

@@ -85,14 +85,19 @@ function telegraphStrike(x){
 }
 // 打王時不定時從天上掉小吃
 function bossSnackDrop(dt, angry){
-  if(arena.snackT === undefined) arena.snackT = 5 + Math.random()*3;
+  if(arena.snackT === undefined){ arena.snackT = 3; arena.hpStep = 5; }
   arena.snackT -= dt;
-  if(arena.snackT > 0) return;
-  arena.snackT = (angry ? 7 : 9) + Math.random()*6;
-  if(items.some(it => it.drop && !it.dead) || !P || P.dead) { arena.snackT = 2; return; }
+  // 魔王每掉 20% 血，一定掉一個道具
+  const step = Math.ceil(boss.hp/boss.max*5);
+  let forced = false;
+  if(step < arena.hpStep){ arena.hpStep = step; forced = true; }
+  if(arena.snackT > 0 && !forced) return;
+  if(!forced) arena.snackT = (angry ? 4.5 : 6) + Math.random()*3;
+  if(!P || P.dead || items.filter(it => it.drop && !it.dead).length >= (forced ? 3 : 2)){ arena.snackT = 1.5; return; }
   const heals = Object.keys(SNACKS).filter(k => SNACKS[k].type !== 'ability');
   const abils = Object.keys(SNACKS).filter(k => SNACKS[k].type === 'ability');
-  const kind = P.hp <= 3 && Math.random() < .7 ? pick(heals) : pick(Math.random() < .55 ? abils : heals);
+  const r = Math.random();
+  const kind = P.hp <= 3 && r < .7 ? pick(heals) : r < .12 ? 'cotton' : pick(Math.random() < .55 ? abils : heals);
   let x = arena.x0 + 2 + Math.random()*(arena.x1 - arena.x0 - 3);
   if(Math.abs(x - boss.x) < 2.5) x = clamp(boss.x + (x < boss.x ? -3.5 : 3.5), arena.x0 + 1.5, arena.x1 - .5);
   const it = spawnItem(kind, x, (boss.def.fly ? boss.baseY : 3) + 9, { drop:true, life:11 });

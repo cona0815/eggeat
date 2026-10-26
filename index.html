@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <!--
-  美食冒險家  v2.3  ·  2026-10-22
+  美食冒險家  v2.4  ·  2026-10-26
+  v2.4 第一、二關沒有洞；被打到不會失去武器（死掉才會）；二段跳更高、跳得過魔王；魔王戰更常掉道具（每打掉 20% 血必掉）
   v2.3 二段跳更有力（會翻一圈）、下降更快、第一關開頭的火球怪不發射、場景加入會動的小生物、新小吃鍋燒意麵（魚丸護衛）
   v2.2 打魔王時會不定時從天上掉小吃（體力低時多掉補血小吃）
   v2.1 走路更順（腳不再陷進地面）、改成兩段跳（棉花糖可一直飄）、被打到能力會消失、新增 5 種武器與 4 種新敵人
@@ -279,7 +280,7 @@ h1,h2,h3{text-wrap:balance}
   <div class="title-wrap">
     <div class="title-left">
       <h1 class="logo"><span class="s">大橋</span><span class="b"><span>美</span><span>食</span><span>冒</span><span>險</span><span>家</span></span></h1>
-      <span class="ver num">v2.3 · 2026-10-22</span>
+      <span class="ver num">v2.4 · 2026-10-26</span>
       <nav class="menu">
         <button class="btn go" id="btnPlay">開始冒險</button>
         <button class="btn" id="btnDex">🍜 小吃圖鑑 <small id="dexCount" class="num"></small></button>
@@ -344,7 +345,7 @@ h1,h2,h3{text-wrap:balance}
         <tr><th>暫停</th><td><span class="kbd">P</span> 或 <span class="kbd">Esc</span></td></tr>
         <tr><th>手把</th><td>A 跳、X／B 吸入攻擊、Y 丟能力、方向鍵下吞、Start 暫停</td></tr>
       </table>
-      <p>被敵人打到，身上的能力會不見，要再吸一隻敵人或吃小吃才能拿回來。吃到<b>台南小吃</b>會得到特別能力或補體力；打魔王時天上會不定時掉下小吃，記得去接；碰到旗子會存檔，掉下去會從旗子重新開始。每關收集星星、找齊小吃，拿到 S 評等吧！</p>
+      <p>拿到的武器只要沒死掉都可以一直用（按 K 可以自己丟掉）。吃到<b>台南小吃</b>會得到特別能力或補體力；打魔王時天上會常常掉下小吃和道具，魔王每少 20% 血也一定會掉一個；二段跳可以跳過魔王；碰到旗子會存檔，掉下去會從旗子重新開始。每關收集星星、找齊小吃，拿到 S 評等吧！</p>
     </div>
   </div>
 </section>
@@ -406,7 +407,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeVertices, mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
-const VERSION = 'v2.3', BUILD_DATE = '2026-10-22';
+const VERSION = 'v2.4', BUILD_DATE = '2026-10-26';
 
 /* =====================================================================
    小工具
@@ -1804,7 +1805,7 @@ const THEMES = {
 
 const LEVELS = [
   { name:'蒲公英草原', theme:'meadow', width:200, par:150, build(g){
-      g.ground(0,30,3);
+      g.ground(0,199,3);   // v2.4 第一關不要有洞
       g.sign(3,3,'← → 移動，空白鍵跳'); g.stars(7,10,5);
       g.sign(12,3,'按住 J 把敵人吸進嘴裡，再按 J 吐出星星！'); g.enemy('acorn',17,3); g.enemy('acorn',25,3);
       g.sign(28,3,'在空中再按一次跳，可以二段跳！');
@@ -1817,16 +1818,15 @@ const LEVELS = [
       g.ground(104,138,3); g.checkpoint(107,3);
       g.item('cotton',110,3); g.spring(112,3); g.plat(114,120,10); g.stars(114,120,11); g.item('wintermelon',121,11);
       g.enemy('frog',124,3); g.box(128,131,3,4); g.box(132,135,3,6); g.enemy('rocky',133,7);
-      g.mover(140,5.5,3, 6,0, 1.6);
       g.ground(151,199,3); g.sign(153,3,'鍋燒意麵：叫出魚丸繞著你轉，再按 J 射出去'); g.item('guoshao',155,3); g.enemy('bird',159,8); g.enemy('yoyokid',162,3); g.item('beef',166,3);
       g.enemy('flame',172,3); g.stars(174,178,5); g.enemy('bomber',182,3); g.metal(187,187,3,5); g.stars(188,190,4);
       g.door(195,3);
   }},
   { name:'安平老街', theme:'oldstreet', width:212, par:190, build(g){
-      g.ground(0,40,3); g.enemy('knight',12,3); g.enemy('acorn',20,3); g.item('shrimp',26,3);
+      g.ground(0,211,3); g.enemy('knight',12,3);   // v2.4 第二關不要有洞 g.enemy('acorn',20,3); g.item('shrimp',26,3);
       g.sign(24,3,'安平蝦捲：發射會追著敵人跑的蝦捲'); g.blocks(32,33,3,5); g.enemy('spark',37,3);
       g.ground(44,70,3); g.box(50,53,3,5); g.plat(55,62,8); g.stars(55,62,9); g.enemy('bomber',58,9);
-      g.enemy('ninja',63,3); g.enemy('cannon',67,3,{ dir:-1 }); g.mover(71,4.5,3, 3,0, 1.4);
+      g.enemy('ninja',63,3); g.enemy('cannon',67,3,{ dir:-1 });
       g.ground(78,110,3); g.checkpoint(80,3); g.item('douhua',85,3); g.enemy('frog',90,3);
       g.spikes(96,98,3); g.plat(95,99,6); g.stars(95,99,7); g.enemy('parasol',104,12); g.item('oyster',108,3);
       g.ground(112,150,3); g.enemy('bomber',116,3); g.sign(118,3,'鐵塊要用炸彈或大鎚才打得破'); g.metal(121,122,3,5); g.stars(121,122,7);
@@ -2400,7 +2400,7 @@ let levelTime = 0, levelDeaths = 0, enemiesDefeated = 0, snacksFound = new Set()
 let respawnPt = null;
 let camX = 10, camY = 7, demoT = 0, shakeAmp = 0, hitStop = 0;
 function addShake(a){ shakeAmp = Math.max(shakeAmp, a); }
-const GRAV = 30, FALL_K = 1.55, JUMP_V = 12.6, JUMP2_V = 11.6, FLAP_V = 6.4, MAX_FALL = 21, PUFF_FALL = 2.6, WALK = 5.4, ACC = 42;
+const GRAV = 30, FALL_K = 1.55, JUMP_V = 12.6, JUMP2_V = 13.2, FLAP_V = 6.4, MAX_FALL = 21, PUFF_FALL = 2.6, WALK = 5.4, ACC = 42;
 
 function aabb(a, b){ return a.x - a.w/2 < b.x + b.w/2 && a.x + a.w/2 > b.x - b.w/2 && a.y < b.y + b.h && a.y + a.h > b.y; }
 const solidT = t => t===SOLID || t===BLOCK || t===METAL;
@@ -2577,7 +2577,6 @@ function hurtPlayer(srcX, dmg=1){
   P.hp -= dmg; P.inv = 1.6;
   P.vx = (P.x < srcX ? -1 : 1) * 6; P.vy = 6;
   P.puffed = false; P.mouth = null; P.inhaling = false; P.atk = null; P.shieldUp = false;
-  if(P.ability) loseAbility();
   sfx.hurt(); burst(P.x, P.y+.5, ['#ff6b6b','#ffffff'], 12, 4); addShake(.28); hitStop = Math.max(hitStop, .1);
   updateHUD(true);
   if(P.hp <= 0) killPlayer();
@@ -2711,7 +2710,7 @@ function updatePlayer(dt, first){
       p.airJumps++;
       if(p.airJumps === 1 && !p.puffed){
         // 第二段跳：跟第一段一樣有力，會翻一圈，不會鼓起來慢慢飄
-        p.vy = JUMP2_V; p.jumpHeld = true; p.flipT = .42; sfx.jump(); burst(p.x, p.y + .2, ['#ffffff','#fff3a0'], 8, 3, .28, .35);
+        p.vy = JUMP2_V; p.jumpHeld = false; p.flipT = .42; sfx.jump(); burst(p.x, p.y + .2, ['#ffffff','#fff3a0'], 8, 3, .28, .35);
       } else { if(!p.puffed){ p.puffed = true; sfx.puff(); } p.vy = FLAP_V; sfx.flap(); burst(p.x - p.face*.3, p.y + .3, ['#ffffff'], 3, 2, .3, .35); }
     } else if(!p.mouth) sfx.deny();
   }
@@ -3255,14 +3254,19 @@ function telegraphStrike(x){
 }
 // 打王時不定時從天上掉小吃
 function bossSnackDrop(dt, angry){
-  if(arena.snackT === undefined) arena.snackT = 5 + Math.random()*3;
+  if(arena.snackT === undefined){ arena.snackT = 3; arena.hpStep = 5; }
   arena.snackT -= dt;
-  if(arena.snackT > 0) return;
-  arena.snackT = (angry ? 7 : 9) + Math.random()*6;
-  if(items.some(it => it.drop && !it.dead) || !P || P.dead) { arena.snackT = 2; return; }
+  // 魔王每掉 20% 血，一定掉一個道具
+  const step = Math.ceil(boss.hp/boss.max*5);
+  let forced = false;
+  if(step < arena.hpStep){ arena.hpStep = step; forced = true; }
+  if(arena.snackT > 0 && !forced) return;
+  if(!forced) arena.snackT = (angry ? 4.5 : 6) + Math.random()*3;
+  if(!P || P.dead || items.filter(it => it.drop && !it.dead).length >= (forced ? 3 : 2)){ arena.snackT = 1.5; return; }
   const heals = Object.keys(SNACKS).filter(k => SNACKS[k].type !== 'ability');
   const abils = Object.keys(SNACKS).filter(k => SNACKS[k].type === 'ability');
-  const kind = P.hp <= 3 && Math.random() < .7 ? pick(heals) : pick(Math.random() < .55 ? abils : heals);
+  const r = Math.random();
+  const kind = P.hp <= 3 && r < .7 ? pick(heals) : r < .12 ? 'cotton' : pick(Math.random() < .55 ? abils : heals);
   let x = arena.x0 + 2 + Math.random()*(arena.x1 - arena.x0 - 3);
   if(Math.abs(x - boss.x) < 2.5) x = clamp(boss.x + (x < boss.x ? -3.5 : 3.5), arena.x0 + 1.5, arena.x1 - .5);
   const it = spawnItem(kind, x, (boss.def.fly ? boss.baseY : 3) + 9, { drop:true, life:11 });
@@ -3557,7 +3561,7 @@ function animateWorld(dt){
     else if(SNACKS[it.type]){ m.position.set(it.x, it.y + .1 + (it.drop && !it.landed ? 0 : Math.sin(now*3 + it.x)*.07), 0); m.children[0].rotation.y = it.drop && !it.landed ? now*5 : Math.sin(now*1.4 + it.x)*.6;
       if(it.drop) m.visible = it.life > 2.5 || Math.floor(it.life*8)%2 === 0;
       if(Math.random() < .05) emit(it.x + (Math.random()-.5)*.3, it.y + .8, .2, 0, 1.2, 0, .8, '#ffffff', .2); }
-    else { m.position.set(it.x, it.y + Math.sin(now*3)*.06, 0); m.rotation.y = now*1.5; }
+    else { m.position.set(it.x, it.y + Math.sin(now*3)*.06, 0); m.rotation.y = now*1.5; if(it.drop) m.visible = it.life > 2.5 || Math.floor(it.life*8)%2 === 0; }
   }
   for(const s of shots){
     if(s.dead) continue;
