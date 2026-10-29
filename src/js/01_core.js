@@ -10,7 +10,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeVertices, mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
-const VERSION = 'v2.4', BUILD_DATE = '2026-10-26';
+const VERSION = 'v2.5', BUILD_DATE = '2026-10-29';
 
 /* =====================================================================
    小工具

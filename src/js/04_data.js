@@ -438,7 +438,7 @@ const LEVELS = [
       g.door(195,3);
   }},
   { name:'安平老街', theme:'oldstreet', width:212, par:190, build(g){
-      g.ground(0,211,3); g.enemy('knight',12,3);   // v2.4 第二關不要有洞 g.enemy('acorn',20,3); g.item('shrimp',26,3);
+      g.ground(0,211,3); g.enemy('knight',12,3); g.enemy('acorn',20,3); g.item('shrimp',26,3);   // v2.4 第二關不要有洞
       g.sign(24,3,'安平蝦捲：發射會追著敵人跑的蝦捲'); g.blocks(32,33,3,5); g.enemy('spark',37,3);
       g.ground(44,70,3); g.box(50,53,3,5); g.plat(55,62,8); g.stars(55,62,9); g.enemy('bomber',58,9);
       g.enemy('ninja',63,3); g.enemy('cannon',67,3,{ dir:-1 });

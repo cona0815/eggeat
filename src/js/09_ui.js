@@ -72,7 +72,7 @@ function startLevel(i, reset=false){
   state = 'playing';
   showBanner(`第 ${i+1} 關`, LEVELS[i].name); setTimeout(hideBanner, 1600);
 }
-function pauseGame(){ if(state !== 'playing') return; Music.duck(true); state = 'paused'; $('pause').hidden = false; $('pauseInfo').textContent = `${LEVELS[levelIndex].name}　★ ${levelStars}/${lvl.starTotal}　${fmtTime(levelTime)}`; setTimeout(() => $('btnResume').focus(), 30); }
+function pauseGame(){ if(state !== 'playing' || clearing) return; Music.duck(true); state = 'paused'; $('pause').hidden = false; $('pauseInfo').textContent = `${LEVELS[levelIndex].name}　★ ${levelStars}/${lvl.starTotal}　${fmtTime(levelTime)}`; setTimeout(() => $('btnResume').focus(), 30); }
 function resumeGame(){ Music.duck(false); hideAllScreens(); state = 'playing'; releaseAll(); }
 function goTitle(){
   hideAllScreens(); $('hud').hidden = true; $('touch').hidden = true; $('sign').hidden = true; document.body.classList.remove('playing');
@@ -179,7 +179,7 @@ $('btnSettings').onclick = () => openPanel('settings');
 $('btnHow').onclick = () => openPanel('how');
 $('btnPause').onclick = () => pauseGame();
 $('btnResume').onclick = resumeGame;
-$('btnRetry').onclick = () => { hideAllScreens(); Music.duck(false); state = 'playing'; levelDeaths++; respawn(); irisOpen(); };
+$('btnRetry').onclick = () => { hideAllScreens(); Music.duck(false); releaseAll(); state = 'playing'; levelDeaths++; respawn(); irisOpen(); Music.play(THEMES[lvl.def.theme].song); };
 $('btnPauseSet').onclick = () => openPanel('settings');
 $('btnHome').onclick = goTitle;
 document.querySelectorAll('#actRow .chip').forEach(c => c.onclick = () => { previewAct(c.dataset.act); sfx.select(); });

@@ -191,9 +191,17 @@ function hurtPlayer(srcX, dmg=1){
   updateHUD(true);
   if(P.hp <= 0) killPlayer();
 }
+// v2.5 掉進洞不會直接死：扣 2 格體力，回到最後站穩的地方
+function pitFall(){
+  const p = P;
+  if(p.hp <= 2 || !p.safe){ p.hp = 0; killPlayer(); return; }
+  p.hp -= 2; p.x = p.safe.x; p.y = p.safe.y + .2; p.vx = 0; p.vy = 0; p.inv = 2;
+  p.puffed = false; p.pound = false; p.stone = false; p.dashT = 0; p.airJumps = 0; p.riding = null;
+  sfx.hurt(); addShake(.25); burst(p.x, p.y + .6, ['#ffffff','#ffcf3f'], 14, 3); toast('掉下去了！扣 2 格體力'); updateHUD(true);
+}
 function killPlayer(){
   if(P.dead) return;
-  P.dead = true; P.hp = 0; state = 'dying'; deathT = 0; P.vy = 13; P.vx = 0;
+  P.dead = true; P.hp = 0; P.flipT = 0; state = 'dying'; deathT = 0; P.vy = 13; P.vx = 0;
   Music.stop(); sfx.die(); updateHUD(true);
 }
 
@@ -244,7 +252,7 @@ function updatePlayer(dt, first){
     hitArea({ x:p.x, w:p.w+.1, y:p.y-.05, h:p.h }, 3, p.x, { tick:.5 });
     if((atkPress && p.stoneT > .35) || p.stoneT > 4){ p.stone = false; sfx.pop(); }
     if(dropPress) dropAbility();
-    if(p.y < -3){ p.hp = 0; killPlayer(); }
+    if(p.y < -3){ pitFall(); }
     return;
   }
 
@@ -320,7 +328,7 @@ function updatePlayer(dt, first){
       p.airJumps++;
       if(p.airJumps === 1 && !p.puffed){
         // 第二段跳：跟第一段一樣有力，會翻一圈，不會鼓起來慢慢飄
-        p.vy = JUMP2_V; p.jumpHeld = false; p.flipT = .42; sfx.jump(); burst(p.x, p.y + .2, ['#ffffff','#fff3a0'], 8, 3, .28, .35);
+        p.vy = JUMP2_V; p.jumpHeld = false; p.flipT = .42; p.flipDir = p.face; sfx.jump(); burst(p.x, p.y + .2, ['#ffffff','#fff3a0'], 8, 3, .28, .35);
       } else { if(!p.puffed){ p.puffed = true; sfx.puff(); } p.vy = FLAP_V; sfx.flap(); burst(p.x - p.face*.3, p.y + .3, ['#ffffff'], 3, 2, .3, .35); }
     } else if(!p.mouth) sfx.deny();
   }
@@ -337,6 +345,8 @@ function updatePlayer(dt, first){
   if(p.y + p.h > LH - .5){ p.y = LH - .5 - p.h; p.vy = Math.min(p.vy, 0); }
   if(p.onGround){
     p.jumpHeld = false; p.airJumps = 0;
+    // 記住最後站穩的地方（腳下左右都是實心地面），掉進洞時回到這裡
+    if(!p.riding){ const fy = Math.round(p.y) - 1; if(solidT(lvl.get(Math.floor(p.x - .5), fy)) && solidT(lvl.get(Math.floor(p.x + .5), fy))) p.safe = { x:p.x, y:p.y }; }
     if(!wasGround){ p.landT = .15; if(p.puffed) exhale(); if(p.pound){ p.pound = false; shockwave(3.2); } else if(p.vy === 0) burst(p.x, p.y+.05, ['#ffffff'], 4, 1.5, .22, .25); }
   }
 
@@ -358,7 +368,7 @@ function updatePlayer(dt, first){
   // 尖刺、掉落
   const tx0 = Math.floor(p.x - p.w/2 + .1), tx1 = Math.floor(p.x + p.w/2 - .1), ty = Math.floor(p.y + .2);
   for(let tx=tx0; tx<=tx1; tx++) if(lvl.get(tx,ty) === SPIKE){ hurtPlayer(p.x - p.face); if(!P.dead) p.vy = 9; break; }
-  if(p.y < -3){ p.hp = 0; killPlayer(); return; }
+  if(p.y < -3){ pitFall(); return; }
 
   // 彈簧
   for(const s of springs){
@@ -621,8 +631,8 @@ function updateItems(dt){
     }
     if(it.type === 'abil' || it.type === 'boulder'){
       it.vy -= GRAV*dt; const wasG = it.onGround;
-      moveBody(it, dt);
-      if(it.type === 'abil'){ if(it.onGround) it.vy = 6.5; if(it.hitWall) it.vx = -(it.vx || 3); }
+      const vx0 = it.vx; moveBody(it, dt);
+      if(it.type === 'abil'){ if(it.onGround) it.vy = 6.5; if(it.hitWall) it.vx = -(vx0 || 3); }
       else { if(it.onGround){ it.vx *= .8; if(!wasG) burst(it.x, it.y, ['#c9c3e6'], 6, 2); }
         if(P && !P.dead && !it.onGround && it.vy < -3 && aabb(it, P)) hurtPlayer(it.x); }
       it.life -= dt;

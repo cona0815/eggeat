@@ -63,7 +63,14 @@ function damageBoss(d){
   if(!boss || boss.dead) return;
   boss.hp -= d; boss.hurtT = .25; sfx.hit(); updateBossBar(); addShake(.15);
   burst(boss.x, boss.y + boss.h*.6, ['#ffffff','#ffe14d'], 8, 4);
-  if(boss.hp <= 0){ boss.dead = true; boss.deadT = 0; sfx.die(); addShake(.6); hitStop = .35; Music.stop(); }
+  if(boss.hp <= 0){
+    boss.dead = true; boss.deadT = 0; sfx.die(); addShake(.6); hitStop = .35; Music.stop();
+    lvl.bossBeaten = true;   // v2.5 打倒後就算死掉，魔王也不會復活
+    for(const e of enemies) if(e.minion && !e.dead) killEnemy(e);
+    for(const s of shots) if(!s.dead && !s.friendly) removeShot(s);
+    for(const it of items) if(!it.dead && it.type === 'boulder') removeItem(it);
+    if(P) P.inv = Math.max(P.inv, 2.5);
+  }
 }
 function bossMinion(types){
   if(enemies.filter(e => !e.dead && e.x > arena.x0 && e.x < arena.x1 + 1).length >= 2) return;
@@ -93,7 +100,7 @@ function bossSnackDrop(dt, angry){
   if(step < arena.hpStep){ arena.hpStep = step; forced = true; }
   if(arena.snackT > 0 && !forced) return;
   if(!forced) arena.snackT = (angry ? 4.5 : 6) + Math.random()*3;
-  if(!P || P.dead || items.filter(it => it.drop && !it.dead).length >= (forced ? 3 : 2)){ arena.snackT = 1.5; return; }
+  if(!P || P.dead || items.filter(it => it.drop && !it.dead).length >= (forced ? 3 : 2)){ if(forced) arena.hpStep = step + 1; arena.snackT = 1.5; return; }
   const heals = Object.keys(SNACKS).filter(k => SNACKS[k].type !== 'ability');
   const abils = Object.keys(SNACKS).filter(k => SNACKS[k].type === 'ability');
   const r = Math.random();
@@ -186,7 +193,7 @@ function clearEntities(){
   if(boss){ scene.remove(boss.mesh); boss.mats.forEach(m => m.dispose()); }
   if(door) scene.remove(door.mesh);
   if(arena) arena.gates.forEach(g => scene.remove(g));
-  if(P){ scene.remove(P.root); P = null; }
+  if(P){ clearOrbs(); scene.remove(P.root); P = null; }
   enemies = []; items = []; shots = []; fx = []; springs = []; movers = []; checkpoints = []; signs = [];
   parts.length = 0; boss = null; arena = null; door = null;
 }
@@ -198,7 +205,8 @@ function spawnEntities(demo){
   for(const c of lvl.checkpoints) makeCheckpoint(c.x, c.y);
   for(const s of lvl.signs) makeSign(s);
   if(lvl.door) makeDoor(lvl.door.x, lvl.door.y);
-  if(lvl.boss) setupArena(lvl.boss);
+  if(lvl.boss && lvl.bossBeaten) makeDoor((lvl.boss.x0 + lvl.boss.x1 + 1)/2, 3);
+  else if(lvl.boss) setupArena(lvl.boss);
 }
 function loadLevel(i, demo=false){
   clearEntities();
@@ -247,11 +255,11 @@ function levelClear(){
   SAVE.best[levelIndex] = { stars:Math.max(prev.stars || 0, levelStars), rank: (order[rank] > (order[prev.rank] || 0)) ? rank : prev.rank, time: Math.min(prev.time || 9999, levelTime) };
   if(next < LEVELS.length) SAVE.unlocked = Math.max(SAVE.unlocked, next + 1);
   saveGame();
-  setTimeout(() => irisClose(() => {
+  setTimeout(() => { if(!clearing || state !== 'playing') return; irisClose(() => {
     const stats = [['星星', `${levelStars}/${lvl.starTotal}`], ['小吃', `${snacksFound.size}/${lvl.snackTotal}`], ['時間', fmtTime(levelTime)], ['打倒', enemiesDefeated]];
     if(next >= LEVELS.length) showResult(rank, '全部破關！', stats, `你和自己做的角色一起吃遍台南、打倒了雷雲王！小吃圖鑑收集了 ${Object.keys(SAVE.snacks).length}/${SNACK_ORDER.length} 種。`,
       [['再玩一次', () => startLevel(0, true), 'go'], ['小吃圖鑑', () => { goTitle(); openPanel('dex'); }], ['回標題', goTitle]]);
     else showResult(rank, '過關！', stats, LEVELS[levelIndex].name + (rank === 'S' ? '　完美！' : rank === 'A' ? '　很棒！' : '　再挑戰拿 S 吧！'),
       [['下一關 →', () => startLevel(next), 'go'], ['重玩這關', () => startLevel(levelIndex)], ['回標題', goTitle]]);
-  }), 1400);
+  }); }, 1400);
 }

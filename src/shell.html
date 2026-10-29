@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <!--
-  美食冒險家  v2.4  ·  2026-10-26
+  美食冒險家  v2.5  ·  2026-10-29
+  v2.5 全面除錯：掉進洞改成扣 2 格體力回到安全處；打倒魔王後死掉不會復活；第二關蝦捲回來了；暫停／重來／魚丸殘留等修正
   v2.4 第一、二關沒有洞；被打到不會失去武器（死掉才會）；二段跳更高、跳得過魔王；魔王戰更常掉道具（每打掉 20% 血必掉）
   v2.3 二段跳更有力（會翻一圈）、下降更快、第一關開頭的火球怪不發射、場景加入會動的小生物、新小吃鍋燒意麵（魚丸護衛）
   v2.2 打魔王時會不定時從天上掉小吃（體力低時多掉補血小吃）
@@ -79,7 +80,7 @@
   <div class="title-wrap">
     <div class="title-left">
       <h1 class="logo"><span class="s">大橋</span><span class="b"><span>美</span><span>食</span><span>冒</span><span>險</span><span>家</span></span></h1>
-      <span class="ver num">v2.4 · 2026-10-26</span>
+      <span class="ver num">v2.5 · 2026-10-29</span>
       <nav class="menu">
         <button class="btn go" id="btnPlay">開始冒險</button>
         <button class="btn" id="btnDex">🍜 小吃圖鑑 <small id="dexCount" class="num"></small></button>
@@ -144,7 +145,7 @@
         <tr><th>暫停</th><td><span class="kbd">P</span> 或 <span class="kbd">Esc</span></td></tr>
         <tr><th>手把</th><td>A 跳、X／B 吸入攻擊、Y 丟能力、方向鍵下吞、Start 暫停</td></tr>
       </table>
-      <p>拿到的武器只要沒死掉都可以一直用（按 K 可以自己丟掉）。吃到<b>台南小吃</b>會得到特別能力或補體力；打魔王時天上會常常掉下小吃和道具，魔王每少 20% 血也一定會掉一個；二段跳可以跳過魔王；碰到旗子會存檔，掉下去會從旗子重新開始。每關收集星星、找齊小吃，拿到 S 評等吧！</p>
+      <p>拿到的武器只要沒死掉都可以一直用（按 K 可以自己丟掉）。吃到<b>台南小吃</b>會得到特別能力或補體力；打魔王時天上會常常掉下小吃和道具，魔王每少 20% 血也一定會掉一個；二段跳可以跳過魔王；碰到旗子會存檔；掉進洞裡會扣 2 格體力，回到剛剛站的地方。每關收集星星、找齊小吃，拿到 S 評等吧！</p>
     </div>
   </div>
 </section>
