@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <!--
-  美食冒險家  v2.5  ·  2026-10-29
+  美食冒險家  v2.6  ·  2026-11-02
+  v2.6 新增 5 種超級武器（雷神鎚、火箭筒、流星雨、龍捲風、彩虹光砲）；魔王戰開打送武器、天上常掉武器；傷害數字、閃光、爆炸光環等特效升級；碰到能力星星就能拿
   v2.5 全面除錯：掉進洞改成扣 2 格體力回到安全處；打倒魔王後死掉不會復活；第二關蝦捲回來了；暫停／重來／魚丸殘留等修正
   v2.4 第一、二關沒有洞；被打到不會失去武器（死掉才會）；二段跳更高、跳得過魔王；魔王戰更常掉道具（每打掉 20% 血必掉）
   v2.3 二段跳更有力（會翻一圈）、下降更快、第一關開頭的火球怪不發射、場景加入會動的小生物、新小吃鍋燒意麵（魚丸護衛）
@@ -12,7 +13,7 @@
   橫向捲軸「吸入／吐星／複製能力」3D 動作過關遊戲（Three.js）
   ・上傳自己做的角色（Tinkercad .zip / .obj+.mtl / .glb / .stl），會自動辨識手、腳、頭頂配件並做出動作
   ・5 個台南主題關卡＋2 隻中魔王＋最終魔王雷雲王
-  ・18 種台南小吃（13 種特別能力＋5 種補給）＋11 種敵人複製能力，附小吃圖鑑
+  ・18 種台南小吃（13 種特別能力＋5 種補給）＋11 種敵人複製能力＋5 種超級武器，附小吃圖鑑
   ・配樂：music/ 資料夾內的 mp3；找不到時自動改用內建合成配樂
   ・存檔：瀏覽器 localStorage／IndexedDB（角色、進度、圖鑑、設定）
   ・部署：整個資料夾（index.html＋music/）拖到 Netlify 或放 GitHub Pages
@@ -227,6 +228,8 @@ h1,h2,h3{text-wrap:balance}
 .screen > *{margin:auto}
 @media (prefers-reduced-motion: reduce){ .logo .b span,#rotate .ph{animation:none} #iris{display:none} }
 
+#flashFx{position:fixed;inset:0;pointer-events:none;z-index:6;opacity:0;mix-blend-mode:screen}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script type="importmap">
@@ -239,6 +242,7 @@ h1,h2,h3{text-wrap:balance}
 <body>
 <div id="stage"></div>
 <div id="vignette"></div>
+<div id="flashFx"></div>
 
 <!-- 讀取畫面 -->
 <div id="boot"><div class="boot-card"><div class="boot-logo">美食冒險家</div><div class="boot-bar"><i id="bootFill"></i></div><div id="bootText">準備鍋碗瓢盆…</div></div></div>
@@ -281,7 +285,7 @@ h1,h2,h3{text-wrap:balance}
   <div class="title-wrap">
     <div class="title-left">
       <h1 class="logo"><span class="s">大橋</span><span class="b"><span>美</span><span>食</span><span>冒</span><span>險</span><span>家</span></span></h1>
-      <span class="ver num">v2.5 · 2026-10-29</span>
+      <span class="ver num">v2.6 · 2026-11-02</span>
       <nav class="menu">
         <button class="btn go" id="btnPlay">開始冒險</button>
         <button class="btn" id="btnDex">🍜 小吃圖鑑 <small id="dexCount" class="num"></small></button>
@@ -408,7 +412,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeVertices, mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
-const VERSION = 'v2.5', BUILD_DATE = '2026-10-29';
+const VERSION = 'v2.6', BUILD_DATE = '2026-11-02';
 
 /* =====================================================================
    小工具
@@ -1399,6 +1403,11 @@ const ABIL = {
   arrow: { name:'弓箭', icon:'🏹', color:0xc98a4b, css:'#a8703a', hint:'按 J 射箭，一箭穿過好幾隻' },
   laser: { name:'雷射', icon:'🔆', color:0x7ff0ff, css:'#2fb8d0', hint:'按 J 發射雷射光束' },
   umbrella:{ name:'雨傘', icon:'☂️', color:0xff6b9a, css:'#e0507e', hint:'按 J 揮傘；按住跳慢慢飄下' },
+  thunder:{ name:'雷神鎚', icon:'⚡', color:0x8fd0ff, css:'#3d84c0', hint:'按 J 往前劈下三道閃電', weapon:true },
+  rocket:{ name:'火箭筒', icon:'🚀', color:0xff5a4a, css:'#d9443a', hint:'按 J 發射火箭，大爆炸', weapon:true },
+  meteor:{ name:'流星雨', icon:'☄️', color:0xffa03a, css:'#e07a1a', hint:'按 J 召喚五顆流星砸下來', weapon:true },
+  tornado:{ name:'龍捲風', icon:'🌪️', color:0xbfe8ff, css:'#5aa8d0', hint:'按 J 放出龍捲風，把敵人捲走', weapon:true },
+  rainbow:{ name:'彩虹光砲', icon:'🌈', color:0xff8ad8, css:'#c95aa8', hint:'按 J 發射超粗彩虹光束', weapon:true },
   yoyo:  { name:'溜溜球', icon:'🪀', color:0xff6b9a, css:'#d94b8a', hint:'按 J 甩出溜溜球再收回' },
   /* 台南小吃特別能力 */
   noodle:  { name:'麵條鞭',   snack:true, icon:'🍜', color:0xffc94a, css:'#e0a420', hint:'按 J 甩出超長麵條鞭' },
@@ -1416,6 +1425,7 @@ const ABIL = {
   pengbing:{ name:'椪餅膨膨', snack:true, icon:'🫓', color:0xe2b066, css:'#c98f3a', hint:'按 J 膨脹放出衝擊波' },
 };
 const COPY_ABILITIES = ['fire','ice','sword','rock','spark','bomb','shuriken','arrow','laser','umbrella','yoyo'];
+const SUPER_WEAPONS = ['thunder','rocket','meteor','tornado','rainbow'];
 
 /* =====================================================================
    台南小吃（模型取自大橋大車拚，並補齊新品項）
@@ -1616,6 +1626,19 @@ function makeHat(ab){
     g.add(mesh(G.cyl, toon(0xcfd6e6), .02,.25,.02, .2,.08,0)); g.add(mesh(G.sphereLo, toon(0xff5a7a,{ emissive:0xaa2244 }), .05,.05,.05, .2,.22,0));
   } else if(ab === 'umbrella'){
     g.add(mesh(G.hemi, toon(0xff6b9a), .36,.22,.36, 0,.04,0)); g.add(mesh(G.cyl, toon(0x6a4a3a), .02,.12,.02, 0,.3,0));
+  } else if(ab === 'thunder'){
+    g.add(mesh(G.cyl, toon(0x6a4a3a), .04,.3,.04, .18,.18,0)); g.add(mesh(G.rbox, toon(0x8fd0ff,{ emissive:0x224466 }), .3,.18,.18, .18,.36,0));
+    addc(g, mesh(G.bolt, toon(0xffe14d,{ emissive:0x886600 }), .16,.2,.16, -.12,.2,0)).rotation.z = .3;
+  } else if(ab === 'rocket'){
+    const r = mesh(G.cyl, toon(0xffffff), .1,.42,.1, 0,.2,0); r.rotation.z = .5; g.add(r);
+    addc(g, mesh(G.cone, toon(0xff5a4a), .1,.16,.1, -.12,.4,0)).rotation.z = .5;
+  } else if(ab === 'meteor'){
+    g.add(mesh(G.dodeca, toon(0x8a5a3a), .18,.18,.18, 0,.12,0)); g.add(mesh(G.sphere, toon(0xffa03a,{ emissive:0xaa4400 }), .14,.1,.14, .14,.24,0));
+  } else if(ab === 'tornado'){
+    for(let i=0;i<3;i++) g.add(mesh(G.cyl, toon(0xbfe8ff), .3 - i*.08,.08,.3 - i*.08, i*.05,.05 + i*.1,0));
+  } else if(ab === 'rainbow'){
+    const cols = [0xff5a5a,0xffa03a,0xffe14d,0x5ad07a,0x5aa8ff,0xa86aff];
+    cols.forEach((c, i) => addc(g, mesh(new THREE.TorusGeometry(.32 - i*.035,.025,6,20,Math.PI), toon(c), 1,1,1, 0,.02,0)));
   } else if(ab === 'yoyo'){
     g.add(mesh(G.sphere, toon(0xff6b9a), .3,.16,.3, 0,.04,0)); g.add(mesh(G.box, toon(0xff6b9a), .36,.03,.18, 0,-.02,.28));
   } else if(ABIL[ab] && ABIL[ab].snack){
@@ -1821,6 +1844,7 @@ const LEVELS = [
       g.enemy('frog',124,3); g.box(128,131,3,4); g.box(132,135,3,6); g.enemy('rocky',133,7);
       g.ground(151,199,3); g.sign(153,3,'鍋燒意麵：叫出魚丸繞著你轉，再按 J 射出去'); g.item('guoshao',155,3); g.enemy('bird',159,8); g.enemy('yoyokid',162,3); g.item('beef',166,3);
       g.enemy('flame',172,3); g.stars(174,178,5); g.enemy('bomber',182,3); g.metal(187,187,3,5); g.stars(188,190,4);
+      g.item('w:thunder',90,3);
       g.door(195,3);
   }},
   { name:'安平老街', theme:'oldstreet', width:212, par:190, build(g){
@@ -1833,6 +1857,7 @@ const LEVELS = [
       g.ground(112,150,3); g.enemy('bomber',116,3); g.sign(118,3,'鐵塊要用炸彈或大鎚才打得破'); g.metal(121,122,3,5); g.stars(121,122,7);
       g.stars(124,128,4); g.enemy('spark',130,3); g.enemy('archer',134,3); g.enemy('knight',140,3); g.item('wangguo',144,3);
       g.ground(154,211,3); g.checkpoint(157,3); g.enemy('acorn',165,3); g.enemy('flame',172,3); g.item('shrimprice',178,3);
+      g.item('w:rocket',100,3);
       g.boss('megaknight',186,207);
   }},
   { name:'棉花糖雲海', theme:'sky', width:212, par:190, build(g){
@@ -1843,7 +1868,7 @@ const LEVELS = [
       g.mover(70,5,3, 0,4, 1.2); g.plat(76,79,7);
       g.ground(82,104,3); g.checkpoint(84,3); g.item('fish',88,3); g.spikes(92,95,3); g.plat(91,96,6); g.enemy('knight',100,3);
       g.mover(106,5,3, 7,0, 1.8); g.enemy('spiky',109,8); g.enemy('bird',112,9);
-      g.ground(117,140,3); g.enemy('rocky',121,3); g.enemy('ninja',126,3); g.item('guoshao',129,3); g.item('almond',133,3); g.enemy('spark',137,3);
+      g.ground(117,140,3); g.enemy('rocky',121,3); g.enemy('ninja',126,3); g.item('guoshao',129,3); g.item('w:tornado',121,3); g.item('almond',133,3); g.enemy('spark',137,3);
       g.box(141,143,0,5); g.stars(141,143,7);
       g.ground(144,170,3); g.checkpoint(146,3); g.enemy('parasol',152,14); g.enemy('bomber',158,3); g.item('beef',163,3);
       g.mover(172,4.5,3, 0,5, 1.3); g.plat(176,180,9); g.stars(176,180,10); g.enemy('spiky',183,7);
@@ -1858,6 +1883,7 @@ const LEVELS = [
       g.ground(122,160,3); g.enemy('ninja',128,3); g.item('cotton',131,3); g.spring(134,3); g.plat(136,142,10); g.stars(136,142,11); g.enemy('ghost',145,7);
       g.enemy('archer',150,3); g.item('beef',156,3);
       g.ground(164,221,3); g.checkpoint(167,3); g.enemy('flame',175,3); g.stars(178,182,5);
+      g.item('w:meteor',140,3);
       g.boss('bigflame',196,217);
   }},
   { name:'雷雲古堡', theme:'castle', width:206, par:220, build(g){
@@ -1868,6 +1894,7 @@ const LEVELS = [
       g.ground(104,140,3); g.enemy('ninja',110,3); g.item('wintermelon',114,3); g.enemy('ghost',120,6); g.blocks(126,127,3,5);
       g.enemy('flame',132,3); g.item('shrimp',137,3);
       g.ground(144,205,3); g.checkpoint(147,3); g.enemy('yoyokid',160,3); g.item('almond',152,3); g.item('cotton',166,3); g.item('beef',156,3); g.stars(158,162,4);
+      g.item('w:rainbow',125,3);
       g.boss('cloudking',172,193);
   }},
 ];
@@ -2535,7 +2562,7 @@ function gainAbility(a, silent){
 function dropAbility(){
   if(!P.ability) return;
   const it = spawnItem('abil', P.x, P.y + .6, { ability:P.ability, life:8 });
-  it.vx = -P.face*3.5; it.vy = 7;
+  it.vx = -P.face*3.5; it.vy = 7; it.t = 0;
   P.ability = null; P.stone = false; P.pound = false; P.shieldUp = false; setHat(); updateHUD(true); sfx.pop();
 }
 function loseAbility(){
@@ -2674,6 +2701,11 @@ function updatePlayer(dt, first){
     else if(ab === 'laser'){ if(p.atkCD <= 0){ fireLaser(); p.atkCD = .7; } }
     else if(ab === 'umbrella'){ if(p.atkCD <= 0){ startAttack('umbrella', .28); p.atkCD = .34; sfx.slash(); } }
     else if(ab === 'yoyo'){ if(p.atkCD <= 0 && !shots.some(s => s.kind === 'yoyo')){ const m = mouthPos(); spawnShot('yoyo', m.x, m.y, p.face*15, 0, { friendly:true, dmg:2, life:1.2, r:.32, boomerang:true, quick:true }); p.atkCD = .3; sfx.flap(); } }
+    else if(ab === 'thunder'){ if(p.atkCD <= 0){ thunderStrike(); p.atkCD = .6; } }
+    else if(ab === 'rocket'){ if(p.atkCD <= 0 && shots.filter(s => s.kind === 'rocket').length < 2){ const m = mouthPos(); spawnShot('rocket', m.x, m.y + .1, p.face*8, 0, { friendly:true, dmg:5, life:1.6, r:.32 }); p.atkCD = .5; sfx.boom(); addShake(.12); burst(m.x - p.face*.4, m.y, ['#ffffff','#cfd6e6'], 10, 3, .35, .4); } }
+    else if(ab === 'meteor'){ if(p.atkCD <= 0){ meteorShower(); p.atkCD = 1.0; } }
+    else if(ab === 'tornado'){ if(p.atkCD <= 0 && !shots.some(s => s.kind === 'tornado')){ spawnShot('tornado', p.x + p.face*1.2, p.y + .1, p.face*5.5, 0, { friendly:true, dmg:1, life:2.4, r:.8, pierce:true }); p.atkCD = .5; sfx.puff(); sfx.flap(); } }
+    else if(ab === 'rainbow'){ if(p.atkCD <= 0){ fireRainbow(); p.atkCD = .9; } }
     else if(ab === 'guoshao'){ if(p.atkCD <= 0){ if(!p.orbs.length) summonOrbs(); else launchOrbs(); p.atkCD = .3; } }
     else if(ab === 'wangguo'){ p.shieldUp = true; p.shieldT = 0; }
     else if(!ab) p.inhaleArmed = true;
@@ -2785,6 +2817,7 @@ function updatePlayer(dt, first){
     else if(SNACKS[it.type]){ removeItem(it); if(!it.drop) collected.add(it.id); eatSnack(it.type, it.drop); }
     else if(it.type === 'life'){ removeItem(it); collected.add(it.id); lives++; sfx.heal(); toast('生命 +1'); updateHUD(true); }
     else if(it.type === 'cotton'){ removeItem(it); collected.add(it.id); eatCotton(); }
+    else if(it.type === 'abil' && !p.mouth && (it.t > .8 || it.fixed)){ removeItem(it); if(it.id) collected.add(it.id); gainAbility(it.ability); if(ABIL[it.ability].weapon){ screenFlash('#fff6c8', .35); ring(p.x, p.y + .6, ABIL[it.ability].css, 24, 7, .32); } }
   }
   if(door && aabb(p, door)) levelClear();
   p.idleT = (p.onGround && Math.abs(p.vx) < .3 && !keys.atk) ? p.idleT + dt : 0;
@@ -2866,6 +2899,61 @@ function fireLaser(){
   for(let i=0;i<10;i++) emit(m.x + f*Math.random()*len, m.y, .2, 0, (Math.random()-.5)*2, 0, .3, Math.random()<.5 ? '#9ff6ff' : '#ffffff', .25);
   sfx.zap(); sfx.zap(); addShake(.08);
 }
+// ── v2.6 超級武器 ──
+function boltMesh(x, yTop, yBot){
+  const g = new THREE.Group(); let px = x, py = yTop;
+  const mat = new THREE.MeshBasicMaterial({ color:0xeaf6ff, transparent:true, opacity:1, depthWrite:false });
+  const mat2 = new THREE.MeshBasicMaterial({ color:0x6fc3ff, transparent:true, opacity:.6, depthWrite:false });
+  while(py > yBot){ const ny = Math.max(yBot, py - .9 - Math.random()*.8), nx = x + (Math.random() - .5)*1.1, L = Math.hypot(nx - px, ny - py);
+    for(const [m, w] of [[mat2, .22], [mat, .09]]){ const c = new THREE.Mesh(G.cyl, m); c.scale.set(w, L, w); c.position.set((px + nx)/2, (py + ny)/2, .2); c.rotation.z = Math.atan2(-(nx - px), ny - py) + Math.PI; g.add(c); }
+    px = nx; py = ny; }
+  g.userData.mats = [mat, mat2]; return g;
+}
+function lightning(x){
+  const top = camY + 9, gy = (() => { for(let y = Math.floor(P.y + 3); y > 0; y--) if(solidT(lvl.get(Math.floor(x), y - 1))) return y; return P.y; })();
+  const b = boltMesh(x, top, gy); scene.add(b);
+  fx.push({ mesh:b, t:0, life:.32, update:(f, k) => { f.mesh.visible = k < .15 || Math.floor(k*20) % 2 === 0; f.mesh.userData.mats.forEach(m => m.opacity = 1 - k); if(k >= 1) f.mesh.userData.mats.forEach(m => m.dispose()); } });
+  hitArea({ x, w:1.6, y:gy - .2, h:top - gy + 1 }, 4, x, { set:new Set(), blocks:true });
+  ring(x, gy + .2, '#9fe0ff', 20, 7, .3); burst(x, gy + .3, ['#ffffff','#9fe0ff','#ffe14d'], 18, 6, .32, .45);
+  for(let i=0;i<8;i++) emit(x + (Math.random() - .5)*.6, gy + Math.random()*4, .3, (Math.random() - .5)*4, Math.random()*3, 0, .3, '#e6f6ff', .22);
+  screenFlash('#cfeaff', .35); sfx.zap(); addShake(.22);
+}
+function thunderStrike(){ const f = P.face, x0 = P.x; [2.2, 3.8, 5.4].forEach((d, i) => setTimeout(() => { if(P && !P.dead && state === 'playing') lightning(x0 + f*d); }, i*110)); }
+function meteorShower(){
+  const f = P.face, x0 = P.x, y0 = P.y;
+  for(let i=0;i<5;i++) setTimeout(() => { if(!P || P.dead || state !== 'playing') return;
+    const tx = x0 + f*(1.6 + i*1.3 + Math.random()*.6);
+    spawnShot('meteor', tx - f*3, y0 + 10, f*4.5, -15, { friendly:true, dmg:3, life:2, r:.4 }); sfx.puff(); }, i*120);
+  toast('☄️ 流星雨！');
+}
+function fireRainbow(){
+  const p = P, f = p.face, m = mouthPos(); let len = 0;
+  for(; len < 16; len += .25){ const t = lvl.get(Math.floor(m.x + f*len), Math.floor(m.y)); if(solidT(t) && t !== BLOCK) break; }
+  hitArea({ x:m.x + f*len/2, w:len, y:m.y - .7, h:1.4 }, 4, p.x, { set:new Set(), blocks:true });
+  const g = new THREE.Group(), cols = [0xff5a5a,0xffa03a,0xffe14d,0x5ad07a,0x5aa8ff,0xa86aff], mats = [];
+  cols.forEach((c, i) => { const mt = new THREE.MeshBasicMaterial({ color:c, transparent:true, opacity:.95, depthWrite:false }); mats.push(mt);
+    const b = new THREE.Mesh(G.cyl, mt); b.scale.set(.11, Math.max(.1, len), .11); b.rotation.z = Math.PI/2; b.position.set(m.x + f*len/2, m.y + .55 - i*.22, .15); g.add(b); });
+  const core = new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:.8, depthWrite:false }); mats.push(core);
+  const cb = new THREE.Mesh(G.cyl, core); cb.scale.set(.25, Math.max(.1, len), .25); cb.rotation.z = Math.PI/2; cb.position.set(m.x + f*len/2, m.y, .1); g.add(cb);
+  scene.add(g);
+  fx.push({ mesh:g, t:0, life:.45, update:(fo, k) => { fo.mesh.scale.y = 1 + Math.sin(k*50)*.12; mats.forEach(mt => mt.opacity = .95*(1 - k*k)); if(k >= 1) mats.forEach(mt => mt.dispose()); } });
+  for(let i=0;i<26;i++){ const c = ['#ff5a5a','#ffa03a','#ffe14d','#5ad07a','#5aa8ff','#a86aff'][i%6]; emit(m.x + f*Math.random()*len, m.y + (Math.random() - .5)*1.2, .3, f*2, (Math.random() - .5)*3, 0, .5, c, .3); }
+  ring(m.x, m.y, '#ffffff', 14, 5, .3); screenFlash('#ffe6fa', .3); sfx.zap(); sfx.ability(); addShake(.18);
+}
+// 畫面閃一下
+function screenFlash(color, a){ const el = document.getElementById('flashFx'); if(!el) return; el.style.transition = 'none'; el.style.background = color; el.style.opacity = a; void el.offsetWidth; el.style.transition = 'opacity .25s ease-out'; el.style.opacity = 0; }
+// 傷害數字
+const _numMats = new Map();
+function popNum(x, y, n, big){
+  const key = n + (big ? 'b' : '');
+  if(!_numMats.has(key)){ const c = document.createElement('canvas'); c.width = 128; c.height = 96; const g = c.getContext('2d');
+    g.font = '800 72px "Baloo 2","Noto Sans TC",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+    g.lineWidth = 14; g.strokeStyle = '#1f2a5a'; g.strokeText(String(n), 64, 52); g.fillStyle = big ? '#ff6b6b' : '#ffe14d'; g.fillText(String(n), 64, 52);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; _numMats.set(key, t); }
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:_numMats.get(key), transparent:true, depthWrite:false, depthTest:false }));
+  sp.renderOrder = 10; const s0 = big ? 1.2 : .85; sp.scale.set(s0*1.33, s0, 1); sp.position.set(x + (Math.random() - .5)*.4, y, .8); scene.add(sp);
+  fx.push({ mesh:sp, t:0, life:.7, update:(f, k) => { f.mesh.position.y = y + k*1.3; const sc = s0*(k < .15 ? .5 + k/.15*.7 : 1.2 - (k - .15)*.3); f.mesh.scale.set(sc*1.33, sc, 1); f.mesh.material.opacity = k > .6 ? (1 - k)/.4 : 1; if(k >= 1) f.mesh.material.dispose(); } });
+}
 function shockwave(r){
   const p = P; p.dashHit = new Set();
   sfx.stone(); sfx.boss(); addShake(.35);
@@ -2880,7 +2968,8 @@ function blast(r){
 }
 function explode(x, y, r, dmg, friendly){
   sfx.boom(); addShake(friendly ? .3 : .25);
-  burst(x, y, ['#ffb02e','#ff6a2b','#ffe45c','#3a3f5c'], 26, 6, .45, .7);
+  burst(x, y, ['#ffb02e','#ff6a2b','#ffe45c','#3a3f5c'], 26 + (r > 2 ? 14 : 0), 6 + r, .45, .7);
+  if(friendly){ ring(x, y, '#fff3c0', 22, 5 + r*2, .35); if(r > 2) screenFlash('#ffe2b0', .3); }
   const s = new THREE.Mesh(G.sphere, new THREE.MeshBasicMaterial({ color:0xffd07a, transparent:true, opacity:.8, depthWrite:false }));
   s.position.set(x, y, 0); s.scale.setScalar(.2); scene.add(s);
   fx.push({ mesh:s, t:0, life:.3, update:(f, k) => { f.mesh.scale.setScalar(.2 + k*r); f.mesh.material.opacity = .8*(1-k); } });
@@ -2918,7 +3007,8 @@ function damageEnemy(e, dmg, srcX){
   if(e.d.invul){ if(e.hurtT<=0){ sfx.hit(); e.hurtT = 0.3; } return; }
   e.hp -= dmg; e.hurtT = 0.25;
   if(!e.kicked){ e.vx = (e.x >= srcX ? 1 : -1) * 3; if(e.d.move === 'walk' || e.d.move === 'hop') e.vy = 3; }
-  sfx.hit(); burst(e.x, e.y + e.h/2, ['#ffffff','#ffe066'], 8, 3.5, .28, .35); addShake(.06);
+  sfx.hit(); burst(e.x, e.y + e.h/2, ['#ffffff','#ffe066'], 10, 4, .3, .38); ring(e.x, e.y + e.h/2, '#ffffff', 10, 4, .22); addShake(dmg >= 4 ? .14 : .06);
+  popNum(e.x, e.y + e.h + .2, dmg, dmg >= 4); if(dmg >= 4) hitStop = Math.max(hitStop, .05);
   if(e.hp <= 0) killEnemy(e);
 }
 function updateEnemy(e, dt){
@@ -3023,7 +3113,7 @@ function updateItems(dt){
     if(it.type === 'abil' || it.type === 'boulder'){
       it.vy -= GRAV*dt; const wasG = it.onGround;
       const vx0 = it.vx; moveBody(it, dt);
-      if(it.type === 'abil'){ if(it.onGround) it.vy = 6.5; if(it.hitWall) it.vx = -(vx0 || 3); }
+      if(it.type === 'abil'){ if(it.fixed && it.onGround) it.vx = 0; if(it.onGround) it.vy = it.fixed ? 4.5 : 6.5; if(it.hitWall) it.vx = -(vx0 || 3); }
       else { if(it.onGround){ it.vx *= .8; if(!wasG) burst(it.x, it.y, ['#c9c3e6'], 6, 2); }
         if(P && !P.dead && !it.onGround && it.vy < -3 && aabb(it, P)) hurtPlayer(it.x); }
       it.life -= dt;
@@ -3048,9 +3138,14 @@ function spawnShot(kind, x, y, vx, vy, opt={}){
   else if(kind === 'wave'){ m = mesh(G.cone, toon(0xffb02e,{ emissive:0xaa4400 }), .3,.7,.3); }
   else if(kind === 'shuriken' || kind === 'shurikenH'){ m = new THREE.Group(); const c = kind === 'shuriken' ? 0xcfd6e6 : 0x5a5f7a; m.add(mesh(G.box, toon(c), .55,.14,.06)); m.add(mesh(G.box, toon(c), .14,.55,.06)); addc(m, mesh(G.cyl, toon(0x3a3f5c), .08,.08,.08)).rotation.x = Math.PI/2; }
   else if(kind === 'arrow' || kind === 'arrowH'){ m = new THREE.Group(); const sh = mesh(G.cyl, toon(0x9a6a3a), .03,.8,.03); sh.rotation.z = Math.PI/2; m.add(sh); const hd = mesh(G.cone, toon(0xcfd6e6), .08,.2,.08, .45,0,0); hd.rotation.z = -Math.PI/2; m.add(hd); m.add(mesh(G.box, toon(kind === 'arrow' ? 0xff6b6b : 0x6a3a9a), .16,.14,.02, -.36,0,0)); }
+  else if(kind === 'rocket'){ m = new THREE.Group(); const b = mesh(G.cyl, toon(0xffffff), .16,.7,.16); b.rotation.z = Math.PI/2; m.add(b); const n = mesh(G.cone, toon(0xff5a4a), .16,.3,.16, .5,0,0); n.rotation.z = -Math.PI/2; m.add(n);
+    for(const s of [-1,1]) m.add(mesh(G.box, toon(0xff5a4a), .2,.06,.02, -.3,s*.16,0)); m.add(mesh(G.box, toon(0x3d84c0), .12,.18,.18, .1,0,0)); }
+  else if(kind === 'meteor'){ m = new THREE.Group(); m.add(mesh(G.dodeca, toon(0x8a5a3a), .45,.45,.45)); m.add(mesh(G.sphere, toon(0xffa03a,{ emissive:0xcc5500 }), .38,.38,.38, .12,.12,.15)); }
+  else if(kind === 'tornado'){ m = new THREE.Group(); const mt = new THREE.MeshBasicMaterial({ color:0x7fb2d8, transparent:true, opacity:.8, depthWrite:false, side:THREE.DoubleSide }); m.userData.ownMat = true; m.userData.mat = mt;
+    for(let i=0;i<6;i++){ const r = .25 + i*.18; const t = new THREE.Mesh(new THREE.TorusGeometry(r, .07 + i*.015, 6, 18), mt); t.rotation.x = Math.PI/2; t.position.y = i*.42; t.userData.ownGeo = true; m.add(t); } m.material = mt; }
   else if(kind === 'fishball'){ m = new THREE.Group(); m.add(mesh(G.sphere, toon(0xfbf6ea), .3,.28,.3)); m.add(mesh(G.sphereLo, toon(0xe8d8b8), .1,.04,.1, 0,.26,0)); }
   else if(kind === 'yoyo'){ m = new THREE.Group(); for(const z of [-.06,.06]){ const d = mesh(G.cyl, toon(0xff6b9a), .24,.07,.24, 0,0,z); d.rotation.x = Math.PI/2; m.add(d); } }
-  if(kind !== 'puff' && kind !== 'wind') addOutline(m, .04);
+  if(kind !== 'puff' && kind !== 'wind' && kind !== 'tornado') addOutline(m, .04);
   scene.add(m);
   if(kind === 'yoyo'){ const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color:0x1f2a5a })); line.frustumCulled = false; scene.add(line); m.userData.line = line; }
   const s = { kind, pierceAll:!!opt.pierce, quick:!!opt.quick, x, y, vx, vy, life:opt.life ?? 1, dmg:opt.dmg ?? 1, friendly:!!opt.friendly, r:opt.r ?? .3, grav:opt.grav || 0, mesh:m, dead:false, t:0,
@@ -3083,10 +3178,18 @@ function updateShots(dt){
     if(s.kind === 'fireball' && Math.random() < .7) emit(s.x, s.y, 0, 0, 1, 0, .3, '#ffb02e', .22);
     if(s.kind === 'shrimp' && Math.random() < .5) emit(s.x - Math.sign(s.vx)*.3, s.y, 0, 0, .5, 0, .3, '#ffd08a', .2);
     if(s.kind === 'ice' && Math.random() < .5) emit(s.x, s.y, 0, 0, 0, 0, .25, '#e6f7ff', .2);
+    if(s.kind === 'rocket'){ s.vx += Math.sign(s.vx)*28*dt; if(Math.abs(s.vx) > 22) s.vx = Math.sign(s.vx)*22; emit(s.x - Math.sign(s.vx)*.5, s.y, 0, -Math.sign(s.vx)*2, (Math.random()-.5), 0, .35, Math.random() < .5 ? '#ffb02e' : '#cfd6e6', .3); }
+    if(s.kind === 'meteor'){ for(let i=0;i<2;i++) emit(s.x - s.vx*.03, s.y - s.vy*.03, 0, -s.vx*.1 + (Math.random()-.5), -s.vy*.1, 0, .35, Math.random() < .5 ? '#ffb02e' : '#ff6a2b', .38); }
+    if(s.kind === 'tornado'){ if(s.t % .3 < dt) s.set.clear();
+      for(const e of enemies){ if(e.dead || e.d.invul) continue; const dx = s.x - e.x; if(Math.abs(dx) < 2.2 && Math.abs(e.y - s.y) < 2.6){ e.x += dx*2.5*dt; e.y += 3*dt; e.frozen = Math.max(e.frozen, .1); } }
+      if(Math.random() < .7) { emit(s.x + (Math.random()-.5)*1.4, s.y + Math.random()*2.4, .2, (Math.random()-.5)*3, 1.5, 0, .45, Math.random() < .5 ? '#5a8fc0' : '#ffffff', .3); if(Math.random() < .3) emit(s.x, s.y + .1, .3, (Math.random()-.5)*5, .5, 0, .4, '#c9a46a', .28); } }
     if((s.kind === 'bomb' || s.kind === 'bombH') && Math.random() < .6) emit(s.x, s.y + .3, 0, 0, 1, 0, .2, '#ffb02e', .15);
-    if(s.life <= 0){ if(s.kind === 'bomb') explode(s.x, s.y, 1.8, 4, true); else if(s.kind === 'bombH') explode(s.x, s.y, 1.4, 1, false); removeShot(s); continue; }
+    if(s.life <= 0){ if(s.kind === 'rocket') explode(s.x, s.y, 2.6, 5, true); else if(s.kind === 'bomb') explode(s.x, s.y, 1.8, 4, true); else if(s.kind === 'bombH') explode(s.x, s.y, 1.4, 1, false); removeShot(s); continue; }
     const t = lvl.get(Math.floor(s.x), Math.floor(s.y));
-    if(solidT(t) && !s.boomerang){
+    if(s.kind === 'tornado'){ if(solidT(t)) { s.y = Math.floor(s.y) + 1; } }
+    else if(solidT(t) && !s.boomerang){
+      if(s.kind === 'rocket'){ explode(s.x, s.y, 2.6, 5, true); removeShot(s); continue; }
+      if(s.kind === 'meteor'){ explode(s.x, s.y + .4, 1.7, 3, true); removeShot(s); continue; }
       if(s.kind === 'bomb'){ explode(s.x, s.y + .3, 1.8, 4, true); removeShot(s); continue; }
       if(s.kind === 'bombH'){ explode(s.x, s.y + .3, 1.4, 1, false); removeShot(s); continue; }
       if(s.maxBounces && s.vy < 0 && s.bounces < s.maxBounces && t !== BLOCK){ s.bounces++; s.y = Math.floor(s.y) + 1.01; s.vy = s.bounceV; sfx.flap(); continue; }
@@ -3095,6 +3198,7 @@ function updateShots(dt){
     }
     const box = { x:s.x, w:s.r*2, y:s.y - s.r, h:s.r*2 };
     if(s.friendly){
+      if(s.kind === 'rocket' || s.kind === 'meteor'){ if(enemies.some(e => !e.dead && aabb(box, e)) || (boss && arena && arena.active && !boss.dead && aabb(box, boss))){ explode(s.x, s.y, s.kind === 'rocket' ? 2.6 : 1.7, s.dmg, true); removeShot(s); } continue; }
       if(s.kind === 'bomb'){ if(enemies.some(e => !e.dead && aabb(box, e)) || (boss && arena && arena.active && !boss.dead && aabb(box, boss))){ explode(s.x, s.y, 1.8, 4, true); removeShot(s); } continue; }
       const pierce = s.boomerang || s.pierceAll;
       const hits = hitArea(box, s.dmg, s.x - s.vx, { set:s.set, freeze:s.freeze });
@@ -3230,6 +3334,9 @@ function startBoss(){
   state = 'cutscene'; cutT = 0; sfx.boss(); Music.play('boss');
   showBanner(boss.def.sub, boss.def.name);
   $('bossName').textContent = boss.def.name; $('bossbar').hidden = false; updateBossBar();
+  // 開打送一把超級武器
+  const ab = pick(SUPER_WEAPONS); const it = spawnItem('abil', arena.x0 + 5.5, 3.4, { ability:ab, fixed:true }); it.t = 1;
+  setTimeout(() => toast(`${ABIL[ab].icon} 送你「${ABIL[ab].name}」，打倒魔王吧！`), 1800);
 }
 let cutT = 0;
 function updateCutscene(dt){
@@ -3241,7 +3348,7 @@ function updateCutscene(dt){
 function updateBossBar(){ $('bossfill').style.width = (boss ? Math.max(0, boss.hp/boss.max*100) : 0) + '%'; }
 function damageBoss(d){
   if(!boss || boss.dead) return;
-  boss.hp -= d; boss.hurtT = .25; sfx.hit(); updateBossBar(); addShake(.15);
+  boss.hp -= d; boss.hurtT = .25; sfx.hit(); updateBossBar(); addShake(.15); popNum(boss.x, boss.y + boss.h + .3, d, d >= 4);
   burst(boss.x, boss.y + boss.h*.6, ['#ffffff','#ffe14d'], 8, 4);
   if(boss.hp <= 0){
     boss.dead = true; boss.deadT = 0; sfx.die(); addShake(.6); hitStop = .35; Music.stop();
@@ -3284,6 +3391,17 @@ function bossSnackDrop(dt, angry){
   const heals = Object.keys(SNACKS).filter(k => SNACKS[k].type !== 'ability');
   const abils = Object.keys(SNACKS).filter(k => SNACKS[k].type === 'ability');
   const r = Math.random();
+  arena.dropN = (arena.dropN || 0) + 1;
+  // 每兩次至少一次是武器（大多是超級武器）
+  const wantWeapon = P.hp > 2 && (arena.dropN % 2 === 0 || r < .25);
+  if(wantWeapon){
+    let wx = arena.x0 + 2 + Math.random()*(arena.x1 - arena.x0 - 3);
+    if(Math.abs(wx - boss.x) < 2.5) wx = clamp(boss.x + (wx < boss.x ? -3.5 : 3.5), arena.x0 + 1.5, arena.x1 - .5);
+    const ab = Math.random() < .75 ? pick(SUPER_WEAPONS) : pick(['sword','bomb','laser','arrow','shuriken','spark']);
+    const it = spawnItem('abil', wx, (boss.def.fly ? boss.baseY : 3) + 8, { ability:ab, life:14, fixed:true }); it.vy = -2; it.t = 1;
+    sfx.select(); toast(`${ABIL[ab].icon} 天上掉下「${ABIL[ab].name}」！碰到就能用`);
+    return;
+  }
   const kind = P.hp <= 3 && r < .7 ? pick(heals) : r < .12 ? 'cotton' : pick(Math.random() < .55 ? abils : heals);
   let x = arena.x0 + 2 + Math.random()*(arena.x1 - arena.x0 - 3);
   if(Math.abs(x - boss.x) < 2.5) x = clamp(boss.x + (x < boss.x ? -3.5 : 3.5), arena.x0 + 1.5, arena.x1 - .5);
@@ -3379,7 +3497,9 @@ function clearEntities(){
 }
 function spawnEntities(demo){
   for(const s of lvl.spawns) spawnEnemy(s.type, s.x, s.y, s);
-  for(const it of lvl.items) if(!collected.has(it.id)){ const o = spawnItem(it.type, it.x, it.y + (it.type === 'star' ? .3 : 0)); o.id = it.id; }
+  for(const it of lvl.items) if(!collected.has(it.id)){
+    if(it.type.startsWith('w:')){ const o = spawnItem('abil', it.x, it.y + .4, { ability:it.type.slice(2), fixed:true }); o.id = it.id; o.t = 1; continue; }
+    const o = spawnItem(it.type, it.x, it.y + (it.type === 'star' ? .3 : 0)); o.id = it.id; }
   for(const s of lvl.springs) makeSpring(s.x, s.y);
   for(const m of lvl.movers) makeMover(m);
   for(const c of lvl.checkpoints) makeCheckpoint(c.x, c.y);
@@ -3586,6 +3706,9 @@ function animateWorld(dt){
     if(s.dead) continue;
     const m = s.mesh; m.position.set(s.x, s.y, 0);
     if(s.kind === 'star') m.rotation.z -= dt*14*Math.sign(s.vx);
+    else if(s.kind === 'rocket'){ m.scale.x = Math.sign(s.vx) || 1; m.rotation.x += dt*10; }
+    else if(s.kind === 'meteor'){ m.rotation.z += dt*8; m.rotation.x += dt*5; }
+    else if(s.kind === 'tornado'){ m.rotation.y += dt*14; m.children.forEach((c, i) => { c.position.x = Math.sin(s.t*9 + i*.7)*.18*i*.4; c.scale.setScalar(1 + Math.sin(s.t*12 + i)*.08); }); m.userData.mat.opacity = Math.min(.8, s.life*1.5); }
     else if(s.kind === 'puff'){ m.scale.setScalar(.25 + s.t*1.6); m.material.opacity = Math.max(0, .75 - s.t*2.4); }
     else if(s.kind === 'wind'){ m.rotation.z += dt*10; m.rotation.y = .6; }
     else if(s.kind === 'fish' || s.kind === 'shrimp'){ m.rotation.z = Math.atan2(s.vy, Math.abs(s.vx))*Math.sign(s.vx); m.scale.x = Math.sign(s.vx) || 1; }

@@ -13,6 +13,11 @@ const ABIL = {
   arrow: { name:'弓箭', icon:'🏹', color:0xc98a4b, css:'#a8703a', hint:'按 J 射箭，一箭穿過好幾隻' },
   laser: { name:'雷射', icon:'🔆', color:0x7ff0ff, css:'#2fb8d0', hint:'按 J 發射雷射光束' },
   umbrella:{ name:'雨傘', icon:'☂️', color:0xff6b9a, css:'#e0507e', hint:'按 J 揮傘；按住跳慢慢飄下' },
+  thunder:{ name:'雷神鎚', icon:'⚡', color:0x8fd0ff, css:'#3d84c0', hint:'按 J 往前劈下三道閃電', weapon:true },
+  rocket:{ name:'火箭筒', icon:'🚀', color:0xff5a4a, css:'#d9443a', hint:'按 J 發射火箭，大爆炸', weapon:true },
+  meteor:{ name:'流星雨', icon:'☄️', color:0xffa03a, css:'#e07a1a', hint:'按 J 召喚五顆流星砸下來', weapon:true },
+  tornado:{ name:'龍捲風', icon:'🌪️', color:0xbfe8ff, css:'#5aa8d0', hint:'按 J 放出龍捲風，把敵人捲走', weapon:true },
+  rainbow:{ name:'彩虹光砲', icon:'🌈', color:0xff8ad8, css:'#c95aa8', hint:'按 J 發射超粗彩虹光束', weapon:true },
   yoyo:  { name:'溜溜球', icon:'🪀', color:0xff6b9a, css:'#d94b8a', hint:'按 J 甩出溜溜球再收回' },
   /* 台南小吃特別能力 */
   noodle:  { name:'麵條鞭',   snack:true, icon:'🍜', color:0xffc94a, css:'#e0a420', hint:'按 J 甩出超長麵條鞭' },
@@ -30,6 +35,7 @@ const ABIL = {
   pengbing:{ name:'椪餅膨膨', snack:true, icon:'🫓', color:0xe2b066, css:'#c98f3a', hint:'按 J 膨脹放出衝擊波' },
 };
 const COPY_ABILITIES = ['fire','ice','sword','rock','spark','bomb','shuriken','arrow','laser','umbrella','yoyo'];
+const SUPER_WEAPONS = ['thunder','rocket','meteor','tornado','rainbow'];
 
 /* =====================================================================
    台南小吃（模型取自大橋大車拚，並補齊新品項）
@@ -230,6 +236,19 @@ function makeHat(ab){
     g.add(mesh(G.cyl, toon(0xcfd6e6), .02,.25,.02, .2,.08,0)); g.add(mesh(G.sphereLo, toon(0xff5a7a,{ emissive:0xaa2244 }), .05,.05,.05, .2,.22,0));
   } else if(ab === 'umbrella'){
     g.add(mesh(G.hemi, toon(0xff6b9a), .36,.22,.36, 0,.04,0)); g.add(mesh(G.cyl, toon(0x6a4a3a), .02,.12,.02, 0,.3,0));
+  } else if(ab === 'thunder'){
+    g.add(mesh(G.cyl, toon(0x6a4a3a), .04,.3,.04, .18,.18,0)); g.add(mesh(G.rbox, toon(0x8fd0ff,{ emissive:0x224466 }), .3,.18,.18, .18,.36,0));
+    addc(g, mesh(G.bolt, toon(0xffe14d,{ emissive:0x886600 }), .16,.2,.16, -.12,.2,0)).rotation.z = .3;
+  } else if(ab === 'rocket'){
+    const r = mesh(G.cyl, toon(0xffffff), .1,.42,.1, 0,.2,0); r.rotation.z = .5; g.add(r);
+    addc(g, mesh(G.cone, toon(0xff5a4a), .1,.16,.1, -.12,.4,0)).rotation.z = .5;
+  } else if(ab === 'meteor'){
+    g.add(mesh(G.dodeca, toon(0x8a5a3a), .18,.18,.18, 0,.12,0)); g.add(mesh(G.sphere, toon(0xffa03a,{ emissive:0xaa4400 }), .14,.1,.14, .14,.24,0));
+  } else if(ab === 'tornado'){
+    for(let i=0;i<3;i++) g.add(mesh(G.cyl, toon(0xbfe8ff), .3 - i*.08,.08,.3 - i*.08, i*.05,.05 + i*.1,0));
+  } else if(ab === 'rainbow'){
+    const cols = [0xff5a5a,0xffa03a,0xffe14d,0x5ad07a,0x5aa8ff,0xa86aff];
+    cols.forEach((c, i) => addc(g, mesh(new THREE.TorusGeometry(.32 - i*.035,.025,6,20,Math.PI), toon(c), 1,1,1, 0,.02,0)));
   } else if(ab === 'yoyo'){
     g.add(mesh(G.sphere, toon(0xff6b9a), .3,.16,.3, 0,.04,0)); g.add(mesh(G.box, toon(0xff6b9a), .36,.03,.18, 0,-.02,.28));
   } else if(ABIL[ab] && ABIL[ab].snack){
@@ -435,6 +454,7 @@ const LEVELS = [
       g.enemy('frog',124,3); g.box(128,131,3,4); g.box(132,135,3,6); g.enemy('rocky',133,7);
       g.ground(151,199,3); g.sign(153,3,'鍋燒意麵：叫出魚丸繞著你轉，再按 J 射出去'); g.item('guoshao',155,3); g.enemy('bird',159,8); g.enemy('yoyokid',162,3); g.item('beef',166,3);
       g.enemy('flame',172,3); g.stars(174,178,5); g.enemy('bomber',182,3); g.metal(187,187,3,5); g.stars(188,190,4);
+      g.item('w:thunder',90,3);
       g.door(195,3);
   }},
   { name:'安平老街', theme:'oldstreet', width:212, par:190, build(g){
@@ -447,6 +467,7 @@ const LEVELS = [
       g.ground(112,150,3); g.enemy('bomber',116,3); g.sign(118,3,'鐵塊要用炸彈或大鎚才打得破'); g.metal(121,122,3,5); g.stars(121,122,7);
       g.stars(124,128,4); g.enemy('spark',130,3); g.enemy('archer',134,3); g.enemy('knight',140,3); g.item('wangguo',144,3);
       g.ground(154,211,3); g.checkpoint(157,3); g.enemy('acorn',165,3); g.enemy('flame',172,3); g.item('shrimprice',178,3);
+      g.item('w:rocket',100,3);
       g.boss('megaknight',186,207);
   }},
   { name:'棉花糖雲海', theme:'sky', width:212, par:190, build(g){
@@ -457,7 +478,7 @@ const LEVELS = [
       g.mover(70,5,3, 0,4, 1.2); g.plat(76,79,7);
       g.ground(82,104,3); g.checkpoint(84,3); g.item('fish',88,3); g.spikes(92,95,3); g.plat(91,96,6); g.enemy('knight',100,3);
       g.mover(106,5,3, 7,0, 1.8); g.enemy('spiky',109,8); g.enemy('bird',112,9);
-      g.ground(117,140,3); g.enemy('rocky',121,3); g.enemy('ninja',126,3); g.item('guoshao',129,3); g.item('almond',133,3); g.enemy('spark',137,3);
+      g.ground(117,140,3); g.enemy('rocky',121,3); g.enemy('ninja',126,3); g.item('guoshao',129,3); g.item('w:tornado',121,3); g.item('almond',133,3); g.enemy('spark',137,3);
       g.box(141,143,0,5); g.stars(141,143,7);
       g.ground(144,170,3); g.checkpoint(146,3); g.enemy('parasol',152,14); g.enemy('bomber',158,3); g.item('beef',163,3);
       g.mover(172,4.5,3, 0,5, 1.3); g.plat(176,180,9); g.stars(176,180,10); g.enemy('spiky',183,7);
@@ -472,6 +493,7 @@ const LEVELS = [
       g.ground(122,160,3); g.enemy('ninja',128,3); g.item('cotton',131,3); g.spring(134,3); g.plat(136,142,10); g.stars(136,142,11); g.enemy('ghost',145,7);
       g.enemy('archer',150,3); g.item('beef',156,3);
       g.ground(164,221,3); g.checkpoint(167,3); g.enemy('flame',175,3); g.stars(178,182,5);
+      g.item('w:meteor',140,3);
       g.boss('bigflame',196,217);
   }},
   { name:'雷雲古堡', theme:'castle', width:206, par:220, build(g){
@@ -482,6 +504,7 @@ const LEVELS = [
       g.ground(104,140,3); g.enemy('ninja',110,3); g.item('wintermelon',114,3); g.enemy('ghost',120,6); g.blocks(126,127,3,5);
       g.enemy('flame',132,3); g.item('shrimp',137,3);
       g.ground(144,205,3); g.checkpoint(147,3); g.enemy('yoyokid',160,3); g.item('almond',152,3); g.item('cotton',166,3); g.item('beef',156,3); g.stars(158,162,4);
+      g.item('w:rainbow',125,3);
       g.boss('cloudking',172,193);
   }},
 ];

@@ -199,3 +199,5 @@ h1,h2,h3{text-wrap:balance}
 @media (max-height:500px){ body #sign{top:calc(64px + env(safe-area-inset-top,0px));bottom:auto;font-size:13px;padding:5px 12px} }
 .screen > *{margin:auto}
 @media (prefers-reduced-motion: reduce){ .logo .b span,#rotate .ph{animation:none} #iris{display:none} }
+
+#flashFx{position:fixed;inset:0;pointer-events:none;z-index:6;opacity:0;mix-blend-mode:screen}

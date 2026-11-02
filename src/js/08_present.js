@@ -139,6 +139,9 @@ function animateWorld(dt){
     if(s.dead) continue;
     const m = s.mesh; m.position.set(s.x, s.y, 0);
     if(s.kind === 'star') m.rotation.z -= dt*14*Math.sign(s.vx);
+    else if(s.kind === 'rocket'){ m.scale.x = Math.sign(s.vx) || 1; m.rotation.x += dt*10; }
+    else if(s.kind === 'meteor'){ m.rotation.z += dt*8; m.rotation.x += dt*5; }
+    else if(s.kind === 'tornado'){ m.rotation.y += dt*14; m.children.forEach((c, i) => { c.position.x = Math.sin(s.t*9 + i*.7)*.18*i*.4; c.scale.setScalar(1 + Math.sin(s.t*12 + i)*.08); }); m.userData.mat.opacity = Math.min(.8, s.life*1.5); }
     else if(s.kind === 'puff'){ m.scale.setScalar(.25 + s.t*1.6); m.material.opacity = Math.max(0, .75 - s.t*2.4); }
     else if(s.kind === 'wind'){ m.rotation.z += dt*10; m.rotation.y = .6; }
     else if(s.kind === 'fish' || s.kind === 'shrimp'){ m.rotation.z = Math.atan2(s.vy, Math.abs(s.vx))*Math.sign(s.vx); m.scale.x = Math.sign(s.vx) || 1; }

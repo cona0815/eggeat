@@ -50,6 +50,9 @@ function startBoss(){
   state = 'cutscene'; cutT = 0; sfx.boss(); Music.play('boss');
   showBanner(boss.def.sub, boss.def.name);
   $('bossName').textContent = boss.def.name; $('bossbar').hidden = false; updateBossBar();
+  // 開打送一把超級武器
+  const ab = pick(SUPER_WEAPONS); const it = spawnItem('abil', arena.x0 + 5.5, 3.4, { ability:ab, fixed:true }); it.t = 1;
+  setTimeout(() => toast(`${ABIL[ab].icon} 送你「${ABIL[ab].name}」，打倒魔王吧！`), 1800);
 }
 let cutT = 0;
 function updateCutscene(dt){
@@ -61,7 +64,7 @@ function updateCutscene(dt){
 function updateBossBar(){ $('bossfill').style.width = (boss ? Math.max(0, boss.hp/boss.max*100) : 0) + '%'; }
 function damageBoss(d){
   if(!boss || boss.dead) return;
-  boss.hp -= d; boss.hurtT = .25; sfx.hit(); updateBossBar(); addShake(.15);
+  boss.hp -= d; boss.hurtT = .25; sfx.hit(); updateBossBar(); addShake(.15); popNum(boss.x, boss.y + boss.h + .3, d, d >= 4);
   burst(boss.x, boss.y + boss.h*.6, ['#ffffff','#ffe14d'], 8, 4);
   if(boss.hp <= 0){
     boss.dead = true; boss.deadT = 0; sfx.die(); addShake(.6); hitStop = .35; Music.stop();
@@ -104,6 +107,17 @@ function bossSnackDrop(dt, angry){
   const heals = Object.keys(SNACKS).filter(k => SNACKS[k].type !== 'ability');
   const abils = Object.keys(SNACKS).filter(k => SNACKS[k].type === 'ability');
   const r = Math.random();
+  arena.dropN = (arena.dropN || 0) + 1;
+  // 每兩次至少一次是武器（大多是超級武器）
+  const wantWeapon = P.hp > 2 && (arena.dropN % 2 === 0 || r < .25);
+  if(wantWeapon){
+    let wx = arena.x0 + 2 + Math.random()*(arena.x1 - arena.x0 - 3);
+    if(Math.abs(wx - boss.x) < 2.5) wx = clamp(boss.x + (wx < boss.x ? -3.5 : 3.5), arena.x0 + 1.5, arena.x1 - .5);
+    const ab = Math.random() < .75 ? pick(SUPER_WEAPONS) : pick(['sword','bomb','laser','arrow','shuriken','spark']);
+    const it = spawnItem('abil', wx, (boss.def.fly ? boss.baseY : 3) + 8, { ability:ab, life:14, fixed:true }); it.vy = -2; it.t = 1;
+    sfx.select(); toast(`${ABIL[ab].icon} 天上掉下「${ABIL[ab].name}」！碰到就能用`);
+    return;
+  }
   const kind = P.hp <= 3 && r < .7 ? pick(heals) : r < .12 ? 'cotton' : pick(Math.random() < .55 ? abils : heals);
   let x = arena.x0 + 2 + Math.random()*(arena.x1 - arena.x0 - 3);
   if(Math.abs(x - boss.x) < 2.5) x = clamp(boss.x + (x < boss.x ? -3.5 : 3.5), arena.x0 + 1.5, arena.x1 - .5);
@@ -199,7 +213,9 @@ function clearEntities(){
 }
 function spawnEntities(demo){
   for(const s of lvl.spawns) spawnEnemy(s.type, s.x, s.y, s);
-  for(const it of lvl.items) if(!collected.has(it.id)){ const o = spawnItem(it.type, it.x, it.y + (it.type === 'star' ? .3 : 0)); o.id = it.id; }
+  for(const it of lvl.items) if(!collected.has(it.id)){
+    if(it.type.startsWith('w:')){ const o = spawnItem('abil', it.x, it.y + .4, { ability:it.type.slice(2), fixed:true }); o.id = it.id; o.t = 1; continue; }
+    const o = spawnItem(it.type, it.x, it.y + (it.type === 'star' ? .3 : 0)); o.id = it.id; }
   for(const s of lvl.springs) makeSpring(s.x, s.y);
   for(const m of lvl.movers) makeMover(m);
   for(const c of lvl.checkpoints) makeCheckpoint(c.x, c.y);
