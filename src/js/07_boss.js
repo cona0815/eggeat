@@ -64,7 +64,7 @@ function updateCutscene(dt){
 function updateBossBar(){ $('bossfill').style.width = (boss ? Math.max(0, boss.hp/boss.max*100) : 0) + '%'; }
 function damageBoss(d){
   if(!boss || boss.dead) return;
-  boss.hp -= d; boss.hurtT = .25; sfx.hit(); updateBossBar(); addShake(.15); popNum(boss.x, boss.y + boss.h + .3, d, d >= 4); gainEnergy(d*2);
+  boss.hp -= d; boss.hurtT = .25; sfx.hit(); updateBossBar(); addShake(.15); popNum(boss.x, boss.y + boss.h + .3, d, d >= 4); gainEnergy(d*.6);
   burst(boss.x, boss.y + boss.h*.6, ['#ffffff','#ffe14d'], 8, 4);
   if(boss.hp <= 0){
     boss.dead = true; boss.deadT = 0; sfx.die(); addShake(.6); hitStop = .35; Music.stop();

@@ -7,7 +7,7 @@ let enemies = [], items = [], shots = [], fx = [], springs = [], movers = [], ch
 let boss = null, arena = null, door = null;
 let lives = 3, starCount = 0, levelStars = 0, deathT = 0, clearing = false;
 let energy = 0;   // v2.7 大招能量 0～100
-function gainEnergy(n){ if(energy >= 100) return; energy = Math.min(100, energy + n); if(energy >= 100){ toast('⭐ 大招準備好了！按 L 放大招'); sfx.ability(); } updateEnergy(); }
+function gainEnergy(n){ if(energy >= 100) return; energy = Math.min(100, Math.round((energy + n)*10)/10); if(energy >= 100){ toast('⭐ 大招準備好了！按 L 放大招'); sfx.ability(); } updateEnergy(); }
 let levelTime = 0, levelDeaths = 0, enemiesDefeated = 0, snacksFound = new Set(), collected = new Set();
 let respawnPt = null;
 let camX = 10, camY = 7, demoT = 0, shakeAmp = 0, hitStop = 0;
@@ -380,7 +380,7 @@ function updatePlayer(dt, first){
   for(const e of enemies){
     if(e.dead || e.kicked || !aabb(p, e) || !(e.frozen > 0 || e.flipT > 0)) continue;
     if(e.flipT > 0 && p.vy < 0 && p.y > e.y + e.h*.4) continue;   // 從上面又踩到：交給踩的判定
-    e.kicked = true; e.flipT = 0; e.frozen = 4; e.vx = (Math.sign(e.x - p.x) || p.face)*11; e.vy = 3; sfx.hit(); gainEnergy(4);
+    e.kicked = true; e.flipT = 0; e.frozen = 4; e.vx = (Math.sign(e.x - p.x) || p.face)*11; e.vy = 3; sfx.hit(); gainEnergy(1);
     burst(e.x, e.y + .4, ['#ffffff','#ffe14d'], 12, 5, .3, .4); popNum(e.x, e.y + e.h + .2, '踢', false);
   }
   // 尖刺、掉落
@@ -407,7 +407,7 @@ function updatePlayer(dt, first){
   // 道具
   for(const it of items){
     if(it.dead || !aabb(p, it)) continue;
-    if(it.type === 'star'){ removeItem(it); collected.add(it.id); starCount++; levelStars++; gainEnergy(6); sfx.coin(); burst(it.x, it.y+.3, ['#ffd43b','#ffffff'], 6, 2.5, .22, .3);
+    if(it.type === 'star'){ removeItem(it); collected.add(it.id); starCount++; levelStars++; gainEnergy(2); sfx.coin(); burst(it.x, it.y+.3, ['#ffd43b','#ffffff'], 6, 2.5, .22, .3);
       if(starCount % 40 === 0){ lives++; toast('星星 40 顆！生命 +1'); } updateHUD(true); }
     else if(SNACKS[it.type]){ removeItem(it); if(!it.drop) collected.add(it.id); eatSnack(it.type, it.drop); }
     else if(it.type === 'life'){ removeItem(it); collected.add(it.id); lives++; sfx.heal(); toast('生命 +1'); updateHUD(true); }
@@ -627,7 +627,7 @@ function spawnEnemy(type, x, y, opt={}){
 }
 function disposeEnemy(e){ scene.remove(e.mesh); e.mats.forEach(m => m.dispose()); e.ice.material.dispose(); }
 function killEnemy(e){
-  if(e.dead) return; e.dead = true; enemiesDefeated++; gainEnergy(12);
+  if(e.dead) return; e.dead = true; enemiesDefeated++; gainEnergy(4);
   if(e.d.ability && !e.minionNoDrop && Math.random() < .75){ const it = spawnItem('abil', e.x, e.y + .6, { ability:e.d.ability, life:10 }); it.vy = 7; it.vx = 0; it.t = .5; }
   burst(e.x, e.y + e.h/2, ['#ffffff','#ffcf3f','#ff9ec4'], 22, 6, .36);
   for(let i=0;i<5;i++){ const a = i/5*Math.PI*2; emit(e.x, e.y + e.h/2, .3, Math.cos(a)*7, Math.sin(a)*7, 0, .35, '#fff6a0', .5, 0, 4); }
@@ -718,7 +718,7 @@ function updateEnemy(e, dt){
       const fromAbove = P.vy < 0 && P.y > e.y + e.h*.45;
       if(fromAbove && !e.d.invul && e.type !== 'spiky'){
         P.vy = keys.jump ? 13 : 9.5; P.airJumps = 0; P.puffed = false; P.y = e.y + e.h;
-        sfx.spring(); burst(e.x, e.y + e.h, ['#ffffff','#ffe14d'], 10, 4, .3, .35); ring(e.x, e.y + e.h, '#ffffff', 12, 5, .25); addShake(.08); gainEnergy(5);
+        sfx.spring(); burst(e.x, e.y + e.h, ['#ffffff','#ffe14d'], 10, 4, .3, .35); ring(e.x, e.y + e.h, '#ffffff', 12, 5, .25); addShake(.08); gainEnergy(2);
         if(e.d.move === 'fly' || e.d.move === 'bob' || e.d.move === 'drift') damageEnemy(e, 99, P.x);
         else { e.flipT = 3.2; e.vx = 0; e.slashT = 0; e.charge = 0; e.drawT = 0; popNum(e.x, e.y + e.h + .3, '翻', false); }
       } else hurtPlayer(e.x);

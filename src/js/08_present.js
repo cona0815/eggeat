@@ -256,7 +256,7 @@ function updateHUD(force=false){
   $('abHint').textContent = adaptKeys(ab ? ab.hint + '　K 丟掉' : '踩敵人、踢飛牠，或碰武器星星');
   updateEnergy();
 }
-function updateEnergy(){ const f = $('enFill'); if(!f) return; f.style.width = energy + '%'; $('energy').classList.toggle('full', energy >= 100); $('enTxt').textContent = energy >= 100 ? (touchVisible() ? '大招 OK！按「大招」' : '大招 OK！按 L') : '大招'; }
+function updateEnergy(){ const f = $('enFill'); if(!f) return; f.style.width = Math.floor(energy) + '%'; $('energy').classList.toggle('full', energy >= 100); $('enTxt').textContent = energy >= 100 ? (touchVisible() ? '大招 OK！按「大招」' : '大招 OK！按 L') : '大招'; }
 let _lastSec = -1;
 function updateTimer(){ const s = Math.floor(levelTime); if(s !== _lastSec){ _lastSec = s; $('timer').textContent = fmtTime(levelTime); } }
 let toastTimer = 0;
