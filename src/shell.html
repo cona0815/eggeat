@@ -3,17 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <!--
-  美食冒險家  v2.6  ·  2026-11-02
+  美食冒險家  v2.7  ·  2026-11-02
+  v2.7 取消吸入，改成踩敵人（翻倒後會起身）再踢飛；踢飛會掉能力星星；新增黑洞、冰晶風暴、星星機關槍；大招能量條＋全畫面大招（L）
   v2.6 新增 5 種超級武器（雷神鎚、火箭筒、流星雨、龍捲風、彩虹光砲）；魔王戰開打送武器、天上常掉武器；傷害數字、閃光、爆炸光環等特效升級；碰到能力星星就能拿
   v2.5 全面除錯：掉進洞改成扣 2 格體力回到安全處；打倒魔王後死掉不會復活；第二關蝦捲回來了；暫停／重來／魚丸殘留等修正
   v2.4 第一、二關沒有洞；被打到不會失去武器（死掉才會）；二段跳更高、跳得過魔王；魔王戰更常掉道具（每打掉 20% 血必掉）
   v2.3 二段跳更有力（會翻一圈）、下降更快、第一關開頭的火球怪不發射、場景加入會動的小生物、新小吃鍋燒意麵（魚丸護衛）
   v2.2 打魔王時會不定時從天上掉小吃（體力低時多掉補血小吃）
   v2.1 走路更順（腳不再陷進地面）、改成兩段跳（棉花糖可一直飄）、被打到能力會消失、新增 5 種武器與 4 種新敵人
-  橫向捲軸「吸入／吐星／複製能力」3D 動作過關遊戲（Three.js）
+  橫向捲軸「踩踏／踢飛／撿武器」3D 動作過關遊戲（Three.js）
   ・上傳自己做的角色（Tinkercad .zip / .obj+.mtl / .glb / .stl），會自動辨識手、腳、頭頂配件並做出動作
   ・5 個台南主題關卡＋2 隻中魔王＋最終魔王雷雲王
-  ・18 種台南小吃（13 種特別能力＋5 種補給）＋11 種敵人複製能力＋5 種超級武器，附小吃圖鑑
+  ・18 種台南小吃（13 種特別能力＋5 種補給）＋11 種敵人複製能力＋8 種超級武器，附小吃圖鑑
   ・配樂：music/ 資料夾內的 mp3；找不到時自動改用內建合成配樂
   ・存檔：瀏覽器 localStorage／IndexedDB（角色、進度、圖鑑、設定）
   ・部署：整個資料夾（index.html＋music/）拖到 Netlify 或放 GitHub Pages
@@ -40,6 +41,7 @@
 <div id="stage"></div>
 <div id="vignette"></div>
 <div id="flashFx"></div>
+<div id="ultFx"><b>大招！</b></div>
 
 <!-- 讀取畫面 -->
 <div id="boot"><div class="boot-card"><div class="boot-logo">美食冒險家</div><div class="boot-bar"><i id="bootFill"></i></div><div id="bootText">準備鍋碗瓢盆…</div></div></div>
@@ -48,6 +50,7 @@
 <div id="hud" hidden>
   <div class="hudbox hud-l">
     <div class="hp" id="hp"></div>
+    <div id="energy"><i id="enFill"></i><b id="enTxt">大招</b></div>
     <div class="meta"><span class="num" id="lives">♥ ×3</span><span class="num" id="stars">★ 0</span><span class="num" id="timer">0:00</span></div>
   </div>
   <div class="hudbox hud-m">
@@ -55,7 +58,7 @@
     <div id="bossbar" hidden><span id="bossName">魔王</span><div class="bar"><i id="bossfill"></i></div></div>
   </div>
   <div class="hud-r">
-    <div class="hudbox" id="ability"><b id="abIcon">○</b><div><span id="abName">沒有能力</span><small id="abHint">按住 J 吸住敵人</small></div></div>
+    <div class="hudbox" id="ability"><b id="abIcon">○</b><div><span id="abName">沒有能力</span><small id="abHint">踩敵人、踢飛牠，或碰武器星星</small></div></div>
     <button class="btn iconbtn" id="btnPause" aria-label="暫停">❚❚</button>
   </div>
 </div>
@@ -67,12 +70,12 @@
 <div id="touch" hidden>
   <div class="pad">
     <div class="tb" data-k="left">◀</div>
-    <div class="tb" data-k="down">吞↓</div>
+    <div class="tb" data-k="ult">大招</div>
     <div class="tb" data-k="right">▶</div>
   </div>
   <div class="pad">
     <div class="tb" data-k="drop">丟</div>
-    <div class="tb big" data-k="atk">吸</div>
+    <div class="tb big" data-k="atk">攻擊</div>
     <div class="tb big" data-k="jump">跳</div>
   </div>
 </div>
@@ -82,7 +85,7 @@
   <div class="title-wrap">
     <div class="title-left">
       <h1 class="logo"><span class="s">大橋</span><span class="b"><span>美</span><span>食</span><span>冒</span><span>險</span><span>家</span></span></h1>
-      <span class="ver num">v2.6 · 2026-11-02</span>
+      <span class="ver num">v2.7 · 2026-11-02</span>
       <nav class="menu">
         <button class="btn go" id="btnPlay">開始冒險</button>
         <button class="btn" id="btnDex">🍜 小吃圖鑑 <small id="dexCount" class="num"></small></button>
@@ -140,12 +143,13 @@
       <table class="keys">
         <tr><th>移動</th><td><span class="kbd">←</span><span class="kbd">→</span> 或 <span class="kbd">A</span><span class="kbd">D</span></td></tr>
         <tr><th>跳／二段跳</th><td><span class="kbd">空白</span> 或 <span class="kbd">↑</span>　在空中可以再跳一次；吃到 🍭 棉花糖後 15 秒內可以一直飄</td></tr>
-        <tr><th>吸入／攻擊</th><td>按住 <span class="kbd">J</span>（或 <span class="kbd">X</span>）把敵人吸進嘴裡，再按一次吐出星星</td></tr>
-        <tr><th>吞下</th><td><span class="kbd">↓</span> 把嘴裡的敵人吞下，複製牠的能力</td></tr>
+        <tr><th>踩敵人</th><td>跳起來踩敵人，牠會翻倒；趁牠起身前碰牠一下就能踢飛（會掉能力星星）</td></tr>
+        <tr><th>攻擊</th><td><span class="kbd">J</span>（或 <span class="kbd">X</span>）用身上的武器攻擊；武器星星碰到就能拿</td></tr>
+        <tr><th>大招</th><td>吃星星、打敵人會累積能量，滿了按 <span class="kbd">L</span> 放全畫面大招</td></tr>
         <tr><th>丟掉能力</th><td><span class="kbd">K</span>（或 <span class="kbd">C</span>）</td></tr>
         <tr><th>揮手／跳舞</th><td><span class="kbd">E</span>　讓你的角色表演一下</td></tr>
         <tr><th>暫停</th><td><span class="kbd">P</span> 或 <span class="kbd">Esc</span></td></tr>
-        <tr><th>手把</th><td>A 跳、X／B 吸入攻擊、Y 丟能力、方向鍵下吞、Start 暫停</td></tr>
+        <tr><th>手把</th><td>A 跳、X／B 攻擊、Y 丟能力、RB 大招、Start 暫停</td></tr>
       </table>
       <p>拿到的武器只要沒死掉都可以一直用（按 K 可以自己丟掉）。吃到<b>台南小吃</b>會得到特別能力或補體力；打魔王時天上會常常掉下小吃和道具，魔王每少 20% 血也一定會掉一個；二段跳可以跳過魔王；碰到旗子會存檔；掉進洞裡會扣 2 格體力，回到剛剛站的地方。每關收集星星、找齊小吃，拿到 S 評等吧！</p>
     </div>

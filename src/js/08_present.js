@@ -106,6 +106,9 @@ function animateWorld(dt){
     setFlash(e.mats, e.hurtT > .12);
     e.ice.visible = e.frozen > 0;
     const u = m.userData;
+    // v2.7 被踩翻倒：四腳朝天，快起身時抖動
+    if(e.flipT > 0){ m.rotation.z = Math.PI + (e.flipT < .9 ? Math.sin(e.t*40)*.25 : 0); m.position.y += e.h*.95; m.scale.set(1.1, .8, 1.1); }
+    else if(m.scale.y < .99 && e.d.move !== 'hop' && !(e.hurtT > 0)) m.scale.setScalar(1);
     if(u.feet && e.d.move !== 'hop'){ const w = Math.sin(e.t*9)*.06; u.feet[0].position.z = .05 + w; u.feet[1].position.z = .05 - w; }
     e.blinkT -= dt;
     if(u.eyes){
@@ -235,7 +238,7 @@ function updateCamera(dt, demo=false){
 /* ── 提示文字：觸控時把按鍵名稱換成畫面按鈕 ── */
 function adaptKeys(t){
   if(!touchVisible()) return t;
-  return t.replace(/← →/g, '◀ ▶').replace(/空白鍵跳/g, '按「跳」跳起來').replace(/空白鍵/g, '「跳」').replace(/按住 J/g, '按住「吸」').replace(/按 J/g, '按「吸」').replace(/再按 J/g, '再按「吸」').replace(/J /g, '「吸」').replace(/按 ↓/g, '按「吞」').replace(/↓ /g, '「吞」').replace(/K 丟掉/g, '「丟」丟掉');
+  return t.replace(/← →/g, '◀ ▶').replace(/空白鍵跳/g, '按「跳」跳起來').replace(/空白鍵/g, '「跳」').replace(/按住 J/g, '按住「攻擊」').replace(/按 J/g, '按「攻擊」').replace(/再按 J/g, '再按「攻擊」').replace(/按 L/g, '按「大招」').replace(/J /g, '「攻擊」').replace(/按 ↓/g, '按「吞」').replace(/↓ /g, '「吞」').replace(/K 丟掉/g, '「丟」丟掉');
 }
 /* ── HUD ── */
 let lastHud = '';
@@ -250,8 +253,10 @@ function updateHUD(force=false){
   $('abIcon').textContent = ab ? ab.icon : (P.mouth ? '😮' : '○');
   $('abIcon').style.background = ab ? ab.css : '';
   $('abName').textContent = ab ? (ab.snack ? `${ab.name}（${SNACKS[P.ability].name}）` : ab.name) : (P.mouth ? '嘴巴塞滿了' : '沒有能力');
-  $('abHint').textContent = adaptKeys(ab ? ab.hint + '　K 丟掉' : (P.mouth ? (P.mouth === 'none' ? 'J 吐星星' : 'J 吐星星　↓ 吞下得能力') : '按住 J 吸住敵人'));
+  $('abHint').textContent = adaptKeys(ab ? ab.hint + '　K 丟掉' : '踩敵人、踢飛牠，或碰武器星星');
+  updateEnergy();
 }
+function updateEnergy(){ const f = $('enFill'); if(!f) return; f.style.width = energy + '%'; $('energy').classList.toggle('full', energy >= 100); $('enTxt').textContent = energy >= 100 ? (touchVisible() ? '大招 OK！按「大招」' : '大招 OK！按 L') : '大招'; }
 let _lastSec = -1;
 function updateTimer(){ const s = Math.floor(levelTime); if(s !== _lastSec){ _lastSec = s; $('timer').textContent = fmtTime(levelTime); } }
 let toastTimer = 0;

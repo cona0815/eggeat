@@ -18,6 +18,9 @@ const ABIL = {
   meteor:{ name:'流星雨', icon:'☄️', color:0xffa03a, css:'#e07a1a', hint:'按 J 召喚五顆流星砸下來', weapon:true },
   tornado:{ name:'龍捲風', icon:'🌪️', color:0xbfe8ff, css:'#5aa8d0', hint:'按 J 放出龍捲風，把敵人捲走', weapon:true },
   rainbow:{ name:'彩虹光砲', icon:'🌈', color:0xff8ad8, css:'#c95aa8', hint:'按 J 發射超粗彩虹光束', weapon:true },
+  blackhole:{ name:'黑洞', icon:'🌀', color:0x8a5aff, css:'#6a3ad0', hint:'按 J 放出黑洞，把敵人吸進去再爆開', weapon:true },
+  icestorm:{ name:'冰晶風暴', icon:'🧊', color:0x9fe3ff, css:'#3fa8d8', hint:'按 J 地面一路冒出冰柱', weapon:true },
+  stargun:{ name:'星星機關槍', icon:'🌟', color:0xffd23f, css:'#e0a400', hint:'按住 J 連發彩色星星', weapon:true },
   yoyo:  { name:'溜溜球', icon:'🪀', color:0xff6b9a, css:'#d94b8a', hint:'按 J 甩出溜溜球再收回' },
   /* 台南小吃特別能力 */
   noodle:  { name:'麵條鞭',   snack:true, icon:'🍜', color:0xffc94a, css:'#e0a420', hint:'按 J 甩出超長麵條鞭' },
@@ -35,7 +38,7 @@ const ABIL = {
   pengbing:{ name:'椪餅膨膨', snack:true, icon:'🫓', color:0xe2b066, css:'#c98f3a', hint:'按 J 膨脹放出衝擊波' },
 };
 const COPY_ABILITIES = ['fire','ice','sword','rock','spark','bomb','shuriken','arrow','laser','umbrella','yoyo'];
-const SUPER_WEAPONS = ['thunder','rocket','meteor','tornado','rainbow'];
+const SUPER_WEAPONS = ['thunder','rocket','meteor','tornado','rainbow','blackhole','icestorm','stargun'];
 
 /* =====================================================================
    台南小吃（模型取自大橋大車拚，並補齊新品項）
@@ -236,6 +239,12 @@ function makeHat(ab){
     g.add(mesh(G.cyl, toon(0xcfd6e6), .02,.25,.02, .2,.08,0)); g.add(mesh(G.sphereLo, toon(0xff5a7a,{ emissive:0xaa2244 }), .05,.05,.05, .2,.22,0));
   } else if(ab === 'umbrella'){
     g.add(mesh(G.hemi, toon(0xff6b9a), .36,.22,.36, 0,.04,0)); g.add(mesh(G.cyl, toon(0x6a4a3a), .02,.12,.02, 0,.3,0));
+  } else if(ab === 'blackhole'){
+    g.add(mesh(G.sphere, toon(0x1d1030), .18,.18,.18, 0,.14,0)); addc(g, mesh(new THREE.TorusGeometry(.26,.04,6,24), toon(0x8a5aff,{ emissive:0x3a1a80 }), 1,1,1, 0,.14,0)).rotation.x = 1.2;
+  } else if(ab === 'icestorm'){
+    for(const [x,h] of [[-.14,.32],[0,.46],[.14,.3]]) g.add(mesh(G.cone, toon(0xbfeeff,{ emissive:0x224466 }), .08,h,.08, x,h/2,0));
+  } else if(ab === 'stargun'){
+    g.add(mesh(G.box, toon(0x3a3f5c), .34,.12,.12, 0,.1,0)); g.add(mesh(G.star, toon(0xffd23f,{ emissive:0x886600 }), .14,.14,.14, .1,.3,0));
   } else if(ab === 'thunder'){
     g.add(mesh(G.cyl, toon(0x6a4a3a), .04,.3,.04, .18,.18,0)); g.add(mesh(G.rbox, toon(0x8fd0ff,{ emissive:0x224466 }), .3,.18,.18, .18,.36,0));
     addc(g, mesh(G.bolt, toon(0xffe14d,{ emissive:0x886600 }), .16,.2,.16, -.12,.2,0)).rotation.z = .3;
@@ -441,10 +450,10 @@ const LEVELS = [
   { name:'蒲公英草原', theme:'meadow', width:200, par:150, build(g){
       g.ground(0,199,3);   // v2.4 第一關不要有洞
       g.sign(3,3,'← → 移動，空白鍵跳'); g.stars(7,10,5);
-      g.sign(12,3,'按住 J 把敵人吸進嘴裡，再按 J 吐出星星！'); g.enemy('acorn',17,3); g.enemy('acorn',25,3);
+      g.sign(12,3,'跳起來踩敵人，牠會翻倒；趁牠起來前碰牠一下，就能把牠踢飛！'); g.enemy('acorn',17,3); g.enemy('acorn',25,3);
       g.sign(28,3,'在空中再按一次跳，可以二段跳！');
       g.ground(34,64,3); g.box(42,45,3,4);
-      g.sign(36,3,'吸住火球怪後按 ↓ 吞下去，就能複製火焰！'); g.enemy('flame',39,3,{ passive:true });
+      g.sign(36,3,'踢飛有能力的敵人會掉出能力星星，碰到就能用！'); g.enemy('flame',39,3,{ passive:true });
       g.plat(48,52,7); g.stars(48,52,8); g.enemy('bird',54,8.5);
       g.sign(57,3,'吃台南小吃會得到特別能力！'); g.item('noodle',60,3);
       g.ground(68,100,3); g.enemy('acorn',72,3); g.enemy('knight',80,3);
@@ -458,7 +467,7 @@ const LEVELS = [
       g.door(195,3);
   }},
   { name:'安平老街', theme:'oldstreet', width:212, par:190, build(g){
-      g.ground(0,211,3); g.enemy('knight',12,3); g.enemy('acorn',20,3); g.item('shrimp',26,3);   // v2.4 第二關不要有洞
+      g.ground(0,211,3); g.enemy('knight',12,3); g.enemy('acorn',20,3); g.item('shrimp',26,3); g.item('w:stargun',40,3);   // v2.4 第二關不要有洞
       g.sign(24,3,'安平蝦捲：發射會追著敵人跑的蝦捲'); g.blocks(32,33,3,5); g.enemy('spark',37,3);
       g.ground(44,70,3); g.box(50,53,3,5); g.plat(55,62,8); g.stars(55,62,9); g.enemy('bomber',58,9);
       g.enemy('ninja',63,3); g.enemy('cannon',67,3,{ dir:-1 });
@@ -476,7 +485,7 @@ const LEVELS = [
       g.ground(35,55,3); g.enemy('icy',41,3); g.enemy('spiky',47,5); g.item('mango',52,3);
       g.item('cotton',50,3); g.spring(54,3); g.plat(57,61,8); g.plat(64,68,8); g.stars(64,68,9); g.enemy('parasol',66,15);
       g.mover(70,5,3, 0,4, 1.2); g.plat(76,79,7);
-      g.ground(82,104,3); g.checkpoint(84,3); g.item('fish',88,3); g.spikes(92,95,3); g.plat(91,96,6); g.enemy('knight',100,3);
+      g.ground(82,104,3); g.checkpoint(84,3); g.item('fish',88,3); g.item('w:icestorm',86,3); g.spikes(92,95,3); g.plat(91,96,6); g.enemy('knight',100,3);
       g.mover(106,5,3, 7,0, 1.8); g.enemy('spiky',109,8); g.enemy('bird',112,9);
       g.ground(117,140,3); g.enemy('rocky',121,3); g.enemy('ninja',126,3); g.item('guoshao',129,3); g.item('w:tornado',121,3); g.item('almond',133,3); g.enemy('spark',137,3);
       g.box(141,143,0,5); g.stars(141,143,7);
@@ -488,7 +497,7 @@ const LEVELS = [
       g.ground(0,36,3); g.enemy('ghost',14,4); g.item('rouyuan',20,3); g.enemy('flame',27,3); g.stars(30,34,5);
       g.ground(40,72,3); g.enemy('bomber',46,3); g.plat(50,56,6); g.stars(50,56,7); g.item('eel',58,3); g.enemy('frog',62,3); g.item('guoshao',66,3);
       g.enemy('cannon',70,3,{ dir:-1 }); g.mover(73,4.5,3, 4,0, 1.5);
-      g.ground(82,118,3); g.checkpoint(84,3); g.enemy('ghost',92,5); g.item('coffin',96,3); g.metal(102,102,3,5);
+      g.ground(82,118,3); g.checkpoint(84,3); g.enemy('ghost',92,5); g.item('coffin',96,3); g.item('w:blackhole',99,3); g.metal(102,102,3,5);
       g.enemy('laserbot',107,3); g.spikes(112,114,3); g.plat(111,115,6); g.item('migao',113,7);
       g.ground(122,160,3); g.enemy('ninja',128,3); g.item('cotton',131,3); g.spring(134,3); g.plat(136,142,10); g.stars(136,142,11); g.enemy('ghost',145,7);
       g.enemy('archer',150,3); g.item('beef',156,3);

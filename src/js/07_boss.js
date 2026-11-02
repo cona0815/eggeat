@@ -64,7 +64,7 @@ function updateCutscene(dt){
 function updateBossBar(){ $('bossfill').style.width = (boss ? Math.max(0, boss.hp/boss.max*100) : 0) + '%'; }
 function damageBoss(d){
   if(!boss || boss.dead) return;
-  boss.hp -= d; boss.hurtT = .25; sfx.hit(); updateBossBar(); addShake(.15); popNum(boss.x, boss.y + boss.h + .3, d, d >= 4);
+  boss.hp -= d; boss.hurtT = .25; sfx.hit(); updateBossBar(); addShake(.15); popNum(boss.x, boss.y + boss.h + .3, d, d >= 4); gainEnergy(d*2);
   burst(boss.x, boss.y + boss.h*.6, ['#ffffff','#ffe14d'], 8, 4);
   if(boss.hp <= 0){
     boss.dead = true; boss.deadT = 0; sfx.die(); addShake(.6); hitStop = .35; Music.stop();
@@ -189,7 +189,10 @@ function updateBoss(dt){
     if(b.minionT <= 0){ bossMinion(['flame','frog','archer']); b.minionT = 8; }
   }
   if(!b.def.fly){ const lo = arena.x0 + 1 + b.w/2, hi = arena.x1 - b.w/2; if(b.x < lo || b.x > hi){ b.x = clamp(b.x, lo, hi); b.hitWall = true; if(b.st === 'dash'){ b.st = 'walk'; b.stT = 0; b.vx = 0; } } }
-  if(P && !P.dead && aabb(P, b)){ if(P.stone && b.tickCD <= 0){ damageBoss(3); b.tickCD = .6; } else hurtPlayer(b.x); }
+  if(P && !P.dead && aabb(P, b)){
+    if(P.stone && b.tickCD <= 0){ damageBoss(3); b.tickCD = .6; }
+    else if(P.vy < 0 && P.y > b.y + b.h*.5){ damageBoss(2); P.vy = 12; P.airJumps = 0; P.inv = Math.max(P.inv, .4); sfx.spring(); ring(P.x, P.y, '#ffffff', 14, 6, .3); }   // 踩魔王的頭
+    else hurtPlayer(b.x); }
 }
 
 /* =====================================================================

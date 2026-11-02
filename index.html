@@ -3,17 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <!--
-  美食冒險家  v2.6  ·  2026-11-02
+  美食冒險家  v2.7  ·  2026-11-02
+  v2.7 取消吸入，改成踩敵人（翻倒後會起身）再踢飛；踢飛會掉能力星星；新增黑洞、冰晶風暴、星星機關槍；大招能量條＋全畫面大招（L）
   v2.6 新增 5 種超級武器（雷神鎚、火箭筒、流星雨、龍捲風、彩虹光砲）；魔王戰開打送武器、天上常掉武器；傷害數字、閃光、爆炸光環等特效升級；碰到能力星星就能拿
   v2.5 全面除錯：掉進洞改成扣 2 格體力回到安全處；打倒魔王後死掉不會復活；第二關蝦捲回來了；暫停／重來／魚丸殘留等修正
   v2.4 第一、二關沒有洞；被打到不會失去武器（死掉才會）；二段跳更高、跳得過魔王；魔王戰更常掉道具（每打掉 20% 血必掉）
   v2.3 二段跳更有力（會翻一圈）、下降更快、第一關開頭的火球怪不發射、場景加入會動的小生物、新小吃鍋燒意麵（魚丸護衛）
   v2.2 打魔王時會不定時從天上掉小吃（體力低時多掉補血小吃）
   v2.1 走路更順（腳不再陷進地面）、改成兩段跳（棉花糖可一直飄）、被打到能力會消失、新增 5 種武器與 4 種新敵人
-  橫向捲軸「吸入／吐星／複製能力」3D 動作過關遊戲（Three.js）
+  橫向捲軸「踩踏／踢飛／撿武器」3D 動作過關遊戲（Three.js）
   ・上傳自己做的角色（Tinkercad .zip / .obj+.mtl / .glb / .stl），會自動辨識手、腳、頭頂配件並做出動作
   ・5 個台南主題關卡＋2 隻中魔王＋最終魔王雷雲王
-  ・18 種台南小吃（13 種特別能力＋5 種補給）＋11 種敵人複製能力＋5 種超級武器，附小吃圖鑑
+  ・18 種台南小吃（13 種特別能力＋5 種補給）＋11 種敵人複製能力＋8 種超級武器，附小吃圖鑑
   ・配樂：music/ 資料夾內的 mp3；找不到時自動改用內建合成配樂
   ・存檔：瀏覽器 localStorage／IndexedDB（角色、進度、圖鑑、設定）
   ・部署：整個資料夾（index.html＋music/）拖到 Netlify 或放 GitHub Pages
@@ -230,6 +231,22 @@ h1,h2,h3{text-wrap:balance}
 
 #flashFx{position:fixed;inset:0;pointer-events:none;z-index:6;opacity:0;mix-blend-mode:screen}
 
+/* v2.7 大招能量條 */
+#energy{position:relative;margin-top:5px;height:16px;border:3px solid var(--ink);border-radius:999px;background:#e6e9f5;overflow:hidden;min-width:150px}
+#energy i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#ffcf3f,#ff8a3d,#ff5ad8);transition:width .2s}
+#energy b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:var(--ink);letter-spacing:1px}
+#energy.full{animation:enGlow .5s ease-in-out infinite alternate}
+#energy.full i{background:linear-gradient(90deg,#ff5a5a,#ffa03a,#ffe14d,#5ad07a,#5aa8ff,#a86aff)}
+#energy.full b{color:#fff;-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;font-size:12px}
+@keyframes enGlow{from{box-shadow:0 0 0 rgba(255,207,63,0)}to{box-shadow:0 0 14px 4px rgba(255,207,63,.9)}}
+#ultFx{position:fixed;inset:0;pointer-events:none;z-index:7;display:flex;align-items:center;justify-content:center;opacity:0}
+#ultFx b{font-size:min(22vw,200px);font-weight:900;color:#fff;-webkit-text-stroke:min(2.4vw,18px) #1f2a5a;paint-order:stroke fill;text-shadow:0 12px 0 #1f2a5a}
+#ultFx.go{animation:ultIn 1.4s ease-out forwards;background:radial-gradient(circle at 50% 50%,rgba(255,240,150,.55),rgba(255,90,216,.25) 45%,rgba(0,0,0,0) 75%)}
+#ultFx.go b{animation:ultTxt 1.4s cubic-bezier(.2,1.6,.4,1) forwards}
+@keyframes ultIn{0%{opacity:0}10%{opacity:1}75%{opacity:1}100%{opacity:0}}
+@keyframes ultTxt{0%{transform:scale(.2) rotate(-12deg)}30%{transform:scale(1.15) rotate(3deg)}50%{transform:scale(1)}100%{transform:scale(1.25);opacity:.0}}
+.tb[data-k="ult"]{background:linear-gradient(135deg,#ffcf3f,#ff5ad8);color:#fff;-webkit-text-stroke:2px #1f2a5a;paint-order:stroke fill}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script type="importmap">
@@ -243,6 +260,7 @@ h1,h2,h3{text-wrap:balance}
 <div id="stage"></div>
 <div id="vignette"></div>
 <div id="flashFx"></div>
+<div id="ultFx"><b>大招！</b></div>
 
 <!-- 讀取畫面 -->
 <div id="boot"><div class="boot-card"><div class="boot-logo">美食冒險家</div><div class="boot-bar"><i id="bootFill"></i></div><div id="bootText">準備鍋碗瓢盆…</div></div></div>
@@ -251,6 +269,7 @@ h1,h2,h3{text-wrap:balance}
 <div id="hud" hidden>
   <div class="hudbox hud-l">
     <div class="hp" id="hp"></div>
+    <div id="energy"><i id="enFill"></i><b id="enTxt">大招</b></div>
     <div class="meta"><span class="num" id="lives">♥ ×3</span><span class="num" id="stars">★ 0</span><span class="num" id="timer">0:00</span></div>
   </div>
   <div class="hudbox hud-m">
@@ -258,7 +277,7 @@ h1,h2,h3{text-wrap:balance}
     <div id="bossbar" hidden><span id="bossName">魔王</span><div class="bar"><i id="bossfill"></i></div></div>
   </div>
   <div class="hud-r">
-    <div class="hudbox" id="ability"><b id="abIcon">○</b><div><span id="abName">沒有能力</span><small id="abHint">按住 J 吸住敵人</small></div></div>
+    <div class="hudbox" id="ability"><b id="abIcon">○</b><div><span id="abName">沒有能力</span><small id="abHint">踩敵人、踢飛牠，或碰武器星星</small></div></div>
     <button class="btn iconbtn" id="btnPause" aria-label="暫停">❚❚</button>
   </div>
 </div>
@@ -270,12 +289,12 @@ h1,h2,h3{text-wrap:balance}
 <div id="touch" hidden>
   <div class="pad">
     <div class="tb" data-k="left">◀</div>
-    <div class="tb" data-k="down">吞↓</div>
+    <div class="tb" data-k="ult">大招</div>
     <div class="tb" data-k="right">▶</div>
   </div>
   <div class="pad">
     <div class="tb" data-k="drop">丟</div>
-    <div class="tb big" data-k="atk">吸</div>
+    <div class="tb big" data-k="atk">攻擊</div>
     <div class="tb big" data-k="jump">跳</div>
   </div>
 </div>
@@ -285,7 +304,7 @@ h1,h2,h3{text-wrap:balance}
   <div class="title-wrap">
     <div class="title-left">
       <h1 class="logo"><span class="s">大橋</span><span class="b"><span>美</span><span>食</span><span>冒</span><span>險</span><span>家</span></span></h1>
-      <span class="ver num">v2.6 · 2026-11-02</span>
+      <span class="ver num">v2.7 · 2026-11-02</span>
       <nav class="menu">
         <button class="btn go" id="btnPlay">開始冒險</button>
         <button class="btn" id="btnDex">🍜 小吃圖鑑 <small id="dexCount" class="num"></small></button>
@@ -343,12 +362,13 @@ h1,h2,h3{text-wrap:balance}
       <table class="keys">
         <tr><th>移動</th><td><span class="kbd">←</span><span class="kbd">→</span> 或 <span class="kbd">A</span><span class="kbd">D</span></td></tr>
         <tr><th>跳／二段跳</th><td><span class="kbd">空白</span> 或 <span class="kbd">↑</span>　在空中可以再跳一次；吃到 🍭 棉花糖後 15 秒內可以一直飄</td></tr>
-        <tr><th>吸入／攻擊</th><td>按住 <span class="kbd">J</span>（或 <span class="kbd">X</span>）把敵人吸進嘴裡，再按一次吐出星星</td></tr>
-        <tr><th>吞下</th><td><span class="kbd">↓</span> 把嘴裡的敵人吞下，複製牠的能力</td></tr>
+        <tr><th>踩敵人</th><td>跳起來踩敵人，牠會翻倒；趁牠起身前碰牠一下就能踢飛（會掉能力星星）</td></tr>
+        <tr><th>攻擊</th><td><span class="kbd">J</span>（或 <span class="kbd">X</span>）用身上的武器攻擊；武器星星碰到就能拿</td></tr>
+        <tr><th>大招</th><td>吃星星、打敵人會累積能量，滿了按 <span class="kbd">L</span> 放全畫面大招</td></tr>
         <tr><th>丟掉能力</th><td><span class="kbd">K</span>（或 <span class="kbd">C</span>）</td></tr>
         <tr><th>揮手／跳舞</th><td><span class="kbd">E</span>　讓你的角色表演一下</td></tr>
         <tr><th>暫停</th><td><span class="kbd">P</span> 或 <span class="kbd">Esc</span></td></tr>
-        <tr><th>手把</th><td>A 跳、X／B 吸入攻擊、Y 丟能力、方向鍵下吞、Start 暫停</td></tr>
+        <tr><th>手把</th><td>A 跳、X／B 攻擊、Y 丟能力、RB 大招、Start 暫停</td></tr>
       </table>
       <p>拿到的武器只要沒死掉都可以一直用（按 K 可以自己丟掉）。吃到<b>台南小吃</b>會得到特別能力或補體力；打魔王時天上會常常掉下小吃和道具，魔王每少 20% 血也一定會掉一個；二段跳可以跳過魔王；碰到旗子會存檔；掉進洞裡會扣 2 格體力，回到剛剛站的地方。每關收集星星、找齊小吃，拿到 S 評等吧！</p>
     </div>
@@ -412,7 +432,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeVertices, mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
-const VERSION = 'v2.6', BUILD_DATE = '2026-11-02';
+const VERSION = 'v2.7', BUILD_DATE = '2026-11-02';
 
 /* =====================================================================
    小工具
@@ -1408,6 +1428,9 @@ const ABIL = {
   meteor:{ name:'流星雨', icon:'☄️', color:0xffa03a, css:'#e07a1a', hint:'按 J 召喚五顆流星砸下來', weapon:true },
   tornado:{ name:'龍捲風', icon:'🌪️', color:0xbfe8ff, css:'#5aa8d0', hint:'按 J 放出龍捲風，把敵人捲走', weapon:true },
   rainbow:{ name:'彩虹光砲', icon:'🌈', color:0xff8ad8, css:'#c95aa8', hint:'按 J 發射超粗彩虹光束', weapon:true },
+  blackhole:{ name:'黑洞', icon:'🌀', color:0x8a5aff, css:'#6a3ad0', hint:'按 J 放出黑洞，把敵人吸進去再爆開', weapon:true },
+  icestorm:{ name:'冰晶風暴', icon:'🧊', color:0x9fe3ff, css:'#3fa8d8', hint:'按 J 地面一路冒出冰柱', weapon:true },
+  stargun:{ name:'星星機關槍', icon:'🌟', color:0xffd23f, css:'#e0a400', hint:'按住 J 連發彩色星星', weapon:true },
   yoyo:  { name:'溜溜球', icon:'🪀', color:0xff6b9a, css:'#d94b8a', hint:'按 J 甩出溜溜球再收回' },
   /* 台南小吃特別能力 */
   noodle:  { name:'麵條鞭',   snack:true, icon:'🍜', color:0xffc94a, css:'#e0a420', hint:'按 J 甩出超長麵條鞭' },
@@ -1425,7 +1448,7 @@ const ABIL = {
   pengbing:{ name:'椪餅膨膨', snack:true, icon:'🫓', color:0xe2b066, css:'#c98f3a', hint:'按 J 膨脹放出衝擊波' },
 };
 const COPY_ABILITIES = ['fire','ice','sword','rock','spark','bomb','shuriken','arrow','laser','umbrella','yoyo'];
-const SUPER_WEAPONS = ['thunder','rocket','meteor','tornado','rainbow'];
+const SUPER_WEAPONS = ['thunder','rocket','meteor','tornado','rainbow','blackhole','icestorm','stargun'];
 
 /* =====================================================================
    台南小吃（模型取自大橋大車拚，並補齊新品項）
@@ -1626,6 +1649,12 @@ function makeHat(ab){
     g.add(mesh(G.cyl, toon(0xcfd6e6), .02,.25,.02, .2,.08,0)); g.add(mesh(G.sphereLo, toon(0xff5a7a,{ emissive:0xaa2244 }), .05,.05,.05, .2,.22,0));
   } else if(ab === 'umbrella'){
     g.add(mesh(G.hemi, toon(0xff6b9a), .36,.22,.36, 0,.04,0)); g.add(mesh(G.cyl, toon(0x6a4a3a), .02,.12,.02, 0,.3,0));
+  } else if(ab === 'blackhole'){
+    g.add(mesh(G.sphere, toon(0x1d1030), .18,.18,.18, 0,.14,0)); addc(g, mesh(new THREE.TorusGeometry(.26,.04,6,24), toon(0x8a5aff,{ emissive:0x3a1a80 }), 1,1,1, 0,.14,0)).rotation.x = 1.2;
+  } else if(ab === 'icestorm'){
+    for(const [x,h] of [[-.14,.32],[0,.46],[.14,.3]]) g.add(mesh(G.cone, toon(0xbfeeff,{ emissive:0x224466 }), .08,h,.08, x,h/2,0));
+  } else if(ab === 'stargun'){
+    g.add(mesh(G.box, toon(0x3a3f5c), .34,.12,.12, 0,.1,0)); g.add(mesh(G.star, toon(0xffd23f,{ emissive:0x886600 }), .14,.14,.14, .1,.3,0));
   } else if(ab === 'thunder'){
     g.add(mesh(G.cyl, toon(0x6a4a3a), .04,.3,.04, .18,.18,0)); g.add(mesh(G.rbox, toon(0x8fd0ff,{ emissive:0x224466 }), .3,.18,.18, .18,.36,0));
     addc(g, mesh(G.bolt, toon(0xffe14d,{ emissive:0x886600 }), .16,.2,.16, -.12,.2,0)).rotation.z = .3;
@@ -1831,10 +1860,10 @@ const LEVELS = [
   { name:'蒲公英草原', theme:'meadow', width:200, par:150, build(g){
       g.ground(0,199,3);   // v2.4 第一關不要有洞
       g.sign(3,3,'← → 移動，空白鍵跳'); g.stars(7,10,5);
-      g.sign(12,3,'按住 J 把敵人吸進嘴裡，再按 J 吐出星星！'); g.enemy('acorn',17,3); g.enemy('acorn',25,3);
+      g.sign(12,3,'跳起來踩敵人，牠會翻倒；趁牠起來前碰牠一下，就能把牠踢飛！'); g.enemy('acorn',17,3); g.enemy('acorn',25,3);
       g.sign(28,3,'在空中再按一次跳，可以二段跳！');
       g.ground(34,64,3); g.box(42,45,3,4);
-      g.sign(36,3,'吸住火球怪後按 ↓ 吞下去，就能複製火焰！'); g.enemy('flame',39,3,{ passive:true });
+      g.sign(36,3,'踢飛有能力的敵人會掉出能力星星，碰到就能用！'); g.enemy('flame',39,3,{ passive:true });
       g.plat(48,52,7); g.stars(48,52,8); g.enemy('bird',54,8.5);
       g.sign(57,3,'吃台南小吃會得到特別能力！'); g.item('noodle',60,3);
       g.ground(68,100,3); g.enemy('acorn',72,3); g.enemy('knight',80,3);
@@ -1848,7 +1877,7 @@ const LEVELS = [
       g.door(195,3);
   }},
   { name:'安平老街', theme:'oldstreet', width:212, par:190, build(g){
-      g.ground(0,211,3); g.enemy('knight',12,3); g.enemy('acorn',20,3); g.item('shrimp',26,3);   // v2.4 第二關不要有洞
+      g.ground(0,211,3); g.enemy('knight',12,3); g.enemy('acorn',20,3); g.item('shrimp',26,3); g.item('w:stargun',40,3);   // v2.4 第二關不要有洞
       g.sign(24,3,'安平蝦捲：發射會追著敵人跑的蝦捲'); g.blocks(32,33,3,5); g.enemy('spark',37,3);
       g.ground(44,70,3); g.box(50,53,3,5); g.plat(55,62,8); g.stars(55,62,9); g.enemy('bomber',58,9);
       g.enemy('ninja',63,3); g.enemy('cannon',67,3,{ dir:-1 });
@@ -1866,7 +1895,7 @@ const LEVELS = [
       g.ground(35,55,3); g.enemy('icy',41,3); g.enemy('spiky',47,5); g.item('mango',52,3);
       g.item('cotton',50,3); g.spring(54,3); g.plat(57,61,8); g.plat(64,68,8); g.stars(64,68,9); g.enemy('parasol',66,15);
       g.mover(70,5,3, 0,4, 1.2); g.plat(76,79,7);
-      g.ground(82,104,3); g.checkpoint(84,3); g.item('fish',88,3); g.spikes(92,95,3); g.plat(91,96,6); g.enemy('knight',100,3);
+      g.ground(82,104,3); g.checkpoint(84,3); g.item('fish',88,3); g.item('w:icestorm',86,3); g.spikes(92,95,3); g.plat(91,96,6); g.enemy('knight',100,3);
       g.mover(106,5,3, 7,0, 1.8); g.enemy('spiky',109,8); g.enemy('bird',112,9);
       g.ground(117,140,3); g.enemy('rocky',121,3); g.enemy('ninja',126,3); g.item('guoshao',129,3); g.item('w:tornado',121,3); g.item('almond',133,3); g.enemy('spark',137,3);
       g.box(141,143,0,5); g.stars(141,143,7);
@@ -1878,7 +1907,7 @@ const LEVELS = [
       g.ground(0,36,3); g.enemy('ghost',14,4); g.item('rouyuan',20,3); g.enemy('flame',27,3); g.stars(30,34,5);
       g.ground(40,72,3); g.enemy('bomber',46,3); g.plat(50,56,6); g.stars(50,56,7); g.item('eel',58,3); g.enemy('frog',62,3); g.item('guoshao',66,3);
       g.enemy('cannon',70,3,{ dir:-1 }); g.mover(73,4.5,3, 4,0, 1.5);
-      g.ground(82,118,3); g.checkpoint(84,3); g.enemy('ghost',92,5); g.item('coffin',96,3); g.metal(102,102,3,5);
+      g.ground(82,118,3); g.checkpoint(84,3); g.enemy('ghost',92,5); g.item('coffin',96,3); g.item('w:blackhole',99,3); g.metal(102,102,3,5);
       g.enemy('laserbot',107,3); g.spikes(112,114,3); g.plat(111,115,6); g.item('migao',113,7);
       g.ground(122,160,3); g.enemy('ninja',128,3); g.item('cotton',131,3); g.spring(134,3); g.plat(136,142,10); g.stars(136,142,11); g.enemy('ghost',145,7);
       g.enemy('archer',150,3); g.item('beef',156,3);
@@ -2424,6 +2453,8 @@ let P = null;
 let enemies = [], items = [], shots = [], fx = [], springs = [], movers = [], checkpoints = [], signs = [];
 let boss = null, arena = null, door = null;
 let lives = 3, starCount = 0, levelStars = 0, deathT = 0, clearing = false;
+let energy = 0;   // v2.7 大招能量 0～100
+function gainEnergy(n){ if(energy >= 100) return; energy = Math.min(100, energy + n); if(energy >= 100){ toast('⭐ 大招準備好了！按 L 放大招'); sfx.ability(); } updateEnergy(); }
 let levelTime = 0, levelDeaths = 0, enemiesDefeated = 0, snacksFound = new Set(), collected = new Set();
 let respawnPt = null;
 let camX = 10, camY = 7, demoT = 0, shakeAmp = 0, hitStop = 0;
@@ -2702,15 +2733,24 @@ function updatePlayer(dt, first){
     else if(ab === 'umbrella'){ if(p.atkCD <= 0){ startAttack('umbrella', .28); p.atkCD = .34; sfx.slash(); } }
     else if(ab === 'yoyo'){ if(p.atkCD <= 0 && !shots.some(s => s.kind === 'yoyo')){ const m = mouthPos(); spawnShot('yoyo', m.x, m.y, p.face*15, 0, { friendly:true, dmg:2, life:1.2, r:.32, boomerang:true, quick:true }); p.atkCD = .3; sfx.flap(); } }
     else if(ab === 'thunder'){ if(p.atkCD <= 0){ thunderStrike(); p.atkCD = .6; } }
+    else if(ab === 'blackhole'){ if(p.atkCD <= 0 && !shots.some(s => s.kind === 'blackhole')){ const m = mouthPos(); spawnShot('blackhole', m.x + p.face*.8, m.y + .3, p.face*3.2, 0, { friendly:true, dmg:1, life:2.2, r:.6, pierce:true }); p.atkCD = .6; sfx.zap(); screenFlash('#c9b0ff', .25); } }
+    else if(ab === 'icestorm'){ if(p.atkCD <= 0){ iceStorm(); p.atkCD = .8; } }
     else if(ab === 'rocket'){ if(p.atkCD <= 0 && shots.filter(s => s.kind === 'rocket').length < 2){ const m = mouthPos(); spawnShot('rocket', m.x, m.y + .1, p.face*8, 0, { friendly:true, dmg:5, life:1.6, r:.32 }); p.atkCD = .5; sfx.boom(); addShake(.12); burst(m.x - p.face*.4, m.y, ['#ffffff','#cfd6e6'], 10, 3, .35, .4); } }
     else if(ab === 'meteor'){ if(p.atkCD <= 0){ meteorShower(); p.atkCD = 1.0; } }
     else if(ab === 'tornado'){ if(p.atkCD <= 0 && !shots.some(s => s.kind === 'tornado')){ spawnShot('tornado', p.x + p.face*1.2, p.y + .1, p.face*5.5, 0, { friendly:true, dmg:1, life:2.4, r:.8, pierce:true }); p.atkCD = .5; sfx.puff(); sfx.flap(); } }
     else if(ab === 'rainbow'){ if(p.atkCD <= 0){ fireRainbow(); p.atkCD = .9; } }
     else if(ab === 'guoshao'){ if(p.atkCD <= 0){ if(!p.orbs.length) summonOrbs(); else launchOrbs(); p.atkCD = .3; } }
     else if(ab === 'wangguo'){ p.shieldUp = true; p.shieldT = 0; }
-    else if(!ab) p.inhaleArmed = true;
+    else if(!ab && p.atkCD <= 0){ p.atkCD = .6; toast('先踩敵人、踢飛牠，或找武器星星！'); }
   }
+  if(ab === 'stargun' && keys.atk && p.atkCD <= 0){ const m = mouthPos(), c = ['#ff5a5a','#ffa03a','#ffe14d','#5ad07a','#5aa8ff','#a86aff'];
+    const sh = spawnShot('gunstar', m.x, m.y + (Math.random()-.5)*.25, p.face*19, (Math.random()-.5)*2.2, { friendly:true, dmg:1, life:.55, r:.26 }); sh.col = c[Math.floor(Math.random()*6)];
+    sh.mesh.traverse(o => { if(o.isMesh && !o.userData.isOutline) o.material = toon(new THREE.Color(sh.col).getHex(), { emissive:0x332200 }); });
+    p.atkCD = .075; if(Math.random() < .5) sfx.flap(); emit(m.x, m.y, .2, p.face*3, (Math.random()-.5)*2, 0, .15, '#fff6c0', .3); }
   if(p.atkCD > cd0 && !p.atk && p.dashT <= 0 && p.spinT <= 0) p.throwT = .22;
+  // 大招
+  if(first && consume('ult')) ultimate();
+  if(p.ultT > 0) updateUltimate(dt);
   p.throwT = Math.max(0, (p.throwT || 0) - dt);
   // 鍋燒意麵：魚丸繞著身體轉，碰到敵人會打、碰到子彈會擋掉
   if(p.orbs.length){
@@ -2785,8 +2825,10 @@ function updatePlayer(dt, first){
   }
   // 冰凍敵人：踢出去
   for(const e of enemies){
-    if(e.dead || e.frozen <= 0 || e.kicked || !aabb(p, e)) continue;
-    e.kicked = true; e.frozen = 4; e.vx = p.face*11; e.vy = 2; sfx.hit();
+    if(e.dead || e.kicked || !aabb(p, e) || !(e.frozen > 0 || e.flipT > 0)) continue;
+    if(e.flipT > 0 && p.vy < 0 && p.y > e.y + e.h*.4) continue;   // 從上面又踩到：交給踩的判定
+    e.kicked = true; e.flipT = 0; e.frozen = 4; e.vx = (Math.sign(e.x - p.x) || p.face)*11; e.vy = 3; sfx.hit(); gainEnergy(4);
+    burst(e.x, e.y + .4, ['#ffffff','#ffe14d'], 12, 5, .3, .4); popNum(e.x, e.y + e.h + .2, '踢', false);
   }
   // 尖刺、掉落
   const tx0 = Math.floor(p.x - p.w/2 + .1), tx1 = Math.floor(p.x + p.w/2 - .1), ty = Math.floor(p.y + .2);
@@ -2812,7 +2854,7 @@ function updatePlayer(dt, first){
   // 道具
   for(const it of items){
     if(it.dead || !aabb(p, it)) continue;
-    if(it.type === 'star'){ removeItem(it); collected.add(it.id); starCount++; levelStars++; sfx.coin(); burst(it.x, it.y+.3, ['#ffd43b','#ffffff'], 6, 2.5, .22, .3);
+    if(it.type === 'star'){ removeItem(it); collected.add(it.id); starCount++; levelStars++; gainEnergy(6); sfx.coin(); burst(it.x, it.y+.3, ['#ffd43b','#ffffff'], 6, 2.5, .22, .3);
       if(starCount % 40 === 0){ lives++; toast('星星 40 顆！生命 +1'); } updateHUD(true); }
     else if(SNACKS[it.type]){ removeItem(it); if(!it.drop) collected.add(it.id); eatSnack(it.type, it.drop); }
     else if(it.type === 'life'){ removeItem(it); collected.add(it.id); lives++; sfx.heal(); toast('生命 +1'); updateHUD(true); }
@@ -2940,6 +2982,42 @@ function fireRainbow(){
   for(let i=0;i<26;i++){ const c = ['#ff5a5a','#ffa03a','#ffe14d','#5ad07a','#5aa8ff','#a86aff'][i%6]; emit(m.x + f*Math.random()*len, m.y + (Math.random() - .5)*1.2, .3, f*2, (Math.random() - .5)*3, 0, .5, c, .3); }
   ring(m.x, m.y, '#ffffff', 14, 5, .3); screenFlash('#ffe6fa', .3); sfx.zap(); sfx.ability(); addShake(.18);
 }
+function iceStorm(){
+  const f = P.face, x0 = P.x, y0 = P.y;
+  for(let i=0;i<7;i++) setTimeout(() => { if(!P || P.dead || state !== 'playing') return;
+    const x = x0 + f*(1.3 + i*1.15); let gy = y0; for(let y = Math.floor(y0 + 2); y > 0; y--) if(solidT(lvl.get(Math.floor(x), y - 1))){ gy = y; break; }
+    const g = new THREE.Group(); for(const [dx, h, w] of [[0, 2.2, .45], [-.35, 1.3, .28], [.35, 1.5, .3]]) g.add(mesh(G.cone, toon(0xbfeeff,{ emissive:0x2a6a9a }), w,h,w, dx,h/2,0));
+    addOutline(g, .03); g.position.set(x, gy, 0); g.scale.y = .01; scene.add(g);
+    fx.push({ mesh:g, t:0, life:.7, update:(fo, k) => { fo.mesh.scale.y = k < .15 ? k/.15 : k > .75 ? (1 - k)/.25 : 1; } });
+    hitArea({ x, w:1.2, y:gy, h:2.3 }, 3, x0, { set:new Set(), freeze:2.5 });
+    burst(x, gy + .3, ['#ffffff','#bfeeff','#9fe3ff'], 12, 5, .3, .45); sfx.zap(); addShake(.08); }, i*75);
+  screenFlash('#dff6ff', .25);
+}
+// ── v2.7 大招：全畫面攻擊 ──
+function ultimate(){
+  if(energy < 100 || !P || P.dead || P.ultT > 0) return;
+  energy = 0; updateEnergy();
+  P.ultT = 2.4; P.ultK = 0; P.inv = Math.max(P.inv, 3.2); P.emote = null;
+  const el = document.getElementById('ultFx'); if(el){ el.classList.remove('go'); void el.offsetWidth; el.classList.add('go'); }
+  screenFlash('#ffffff', .9); addShake(.5); hitStop = .25; sfx.boss(); sfx.ability(); Music.duck && Music.duck(false);
+  ring(P.x, P.y + .6, '#ffe14d', 40, 14, .5); ring(P.x, P.y + .6, '#ff8ad8', 30, 10, .45);
+}
+function updateUltimate(dt){
+  const p = P; p.ultT -= dt; p.ultK += dt;
+  const half = 15;
+  // 彩虹流星雨
+  if(Math.random() < dt*22) spawnShot('ultstar', camX + (Math.random() - .3)*half*2 - 4, camY + 11 + Math.random()*3, 5 + Math.random()*3, -16 - Math.random()*5, { friendly:true, dmg:4, life:2.5, r:.6 });
+  // 閃電
+  if(Math.random() < dt*3.5) lightning(camX + (Math.random() - .5)*half*1.6);
+  // 1.2 秒時全畫面重擊
+  if(!p.ultHit && p.ultK > 1.2){ p.ultHit = true;
+    for(const e of enemies) if(!e.dead && Math.abs(e.x - camX) < half + 2) damageEnemy(e, 12, p.x);
+    if(boss && arena && arena.active && !boss.dead) damageBoss(10);
+    screenFlash('#fffbe0', 1); addShake(.7); sfx.boom(); sfx.boom();
+    for(let i=0;i<5;i++) ring(camX + (i - 2)*6, camY, ['#ff5a5a','#ffe14d','#5ad07a','#5aa8ff','#a86aff'][i], 36, 16, .5);
+  }
+  if(p.ultT <= 0){ p.ultHit = false; }
+}
 // 畫面閃一下
 function screenFlash(color, a){ const el = document.getElementById('flashFx'); if(!el) return; el.style.transition = 'none'; el.style.background = color; el.style.opacity = a; void el.offsetWidth; el.style.transition = 'opacity .25s ease-out'; el.style.opacity = 0; }
 // 傷害數字
@@ -2996,7 +3074,8 @@ function spawnEnemy(type, x, y, opt={}){
 }
 function disposeEnemy(e){ scene.remove(e.mesh); e.mats.forEach(m => m.dispose()); e.ice.material.dispose(); }
 function killEnemy(e){
-  if(e.dead) return; e.dead = true; enemiesDefeated++;
+  if(e.dead) return; e.dead = true; enemiesDefeated++; gainEnergy(12);
+  if(e.d.ability && !e.minionNoDrop && Math.random() < .75){ const it = spawnItem('abil', e.x, e.y + .6, { ability:e.d.ability, life:10 }); it.vy = 7; it.vx = 0; it.t = .5; }
   burst(e.x, e.y + e.h/2, ['#ffffff','#ffcf3f','#ff9ec4'], 22, 6, .36);
   for(let i=0;i<5;i++){ const a = i/5*Math.PI*2; emit(e.x, e.y + e.h/2, .3, Math.cos(a)*7, Math.sin(a)*7, 0, .35, '#fff6a0', .5, 0, 4); }
   disposeEnemy(e); sfx.pop(); hitStop = Math.max(hitStop, .06); addShake(.12);
@@ -3023,6 +3102,12 @@ function updateEnemy(e, dt){
     for(const o of enemies){ if(o !== e && !o.dead && aabb(o, e)){ damageEnemy(o, 3, e.x); killEnemy(e); return; } }
     if(boss && arena && arena.active && !boss.dead && aabb(e, boss)){ damageBoss(3); killEnemy(e); return; }
     if(e.hitWall || e.y < -4){ killEnemy(e); }
+    return;
+  }
+  if(e.flipT > 0){
+    e.flipT -= dt; e.vx *= Math.pow(.05, dt);
+    if(e.d.move !== 'fly' && e.d.move !== 'ghost' && e.d.move !== 'bob'){ e.vy -= GRAV*dt; moveBody(e, dt); }
+    if(e.flipT <= 0){ e.flipT = 0; e.vy = 6; burst(e.x, e.y + .5, ['#ffffff'], 6, 2); }   // 起身
     return;
   }
   if(e.frozen > 0){ e.vx *= .9; if(e.d.move !== 'fly' && e.d.move !== 'ghost' && e.d.move !== 'bob'){ e.vy -= GRAV*dt; moveBody(e, dt); } return; }
@@ -3075,7 +3160,16 @@ function updateEnemy(e, dt){
     }
     if(e.type === 'yoyokid'){ if(e.slashCD <= 0 && adx < 2.8 && ady < 1.3){ e.dir = Math.sign(dxp) || 1; e.slashT = .45; e.slashCD = 1.8; sfx.flap(); }
       if(e.slashT > 0){ e.slashT -= dt; if(aabb({ x:e.x + e.dir*1.4, w:2.4, y:e.y + .2, h:.6 }, P)) hurtPlayer(e.x); } }
-    if(aabb(P, e) && !P.stone) hurtPlayer(e.x);
+    if(aabb(P, e) && !P.stone){
+      // v2.7 從上面踩下去：敵人翻倒（會飛的直接打倒；刺刺怪、鬼魂不能踩）
+      const fromAbove = P.vy < 0 && P.y > e.y + e.h*.45;
+      if(fromAbove && !e.d.invul && e.type !== 'spiky'){
+        P.vy = keys.jump ? 13 : 9.5; P.airJumps = 0; P.puffed = false; P.y = e.y + e.h;
+        sfx.spring(); burst(e.x, e.y + e.h, ['#ffffff','#ffe14d'], 10, 4, .3, .35); ring(e.x, e.y + e.h, '#ffffff', 12, 5, .25); addShake(.08); gainEnergy(5);
+        if(e.d.move === 'fly' || e.d.move === 'bob' || e.d.move === 'drift') damageEnemy(e, 99, P.x);
+        else { e.flipT = 3.2; e.vx = 0; e.slashT = 0; e.charge = 0; e.drawT = 0; popNum(e.x, e.y + e.h + .3, '翻', false); }
+      } else hurtPlayer(e.x);
+    }
   }
 }
 
@@ -3138,6 +3232,12 @@ function spawnShot(kind, x, y, vx, vy, opt={}){
   else if(kind === 'wave'){ m = mesh(G.cone, toon(0xffb02e,{ emissive:0xaa4400 }), .3,.7,.3); }
   else if(kind === 'shuriken' || kind === 'shurikenH'){ m = new THREE.Group(); const c = kind === 'shuriken' ? 0xcfd6e6 : 0x5a5f7a; m.add(mesh(G.box, toon(c), .55,.14,.06)); m.add(mesh(G.box, toon(c), .14,.55,.06)); addc(m, mesh(G.cyl, toon(0x3a3f5c), .08,.08,.08)).rotation.x = Math.PI/2; }
   else if(kind === 'arrow' || kind === 'arrowH'){ m = new THREE.Group(); const sh = mesh(G.cyl, toon(0x9a6a3a), .03,.8,.03); sh.rotation.z = Math.PI/2; m.add(sh); const hd = mesh(G.cone, toon(0xcfd6e6), .08,.2,.08, .45,0,0); hd.rotation.z = -Math.PI/2; m.add(hd); m.add(mesh(G.box, toon(kind === 'arrow' ? 0xff6b6b : 0x6a3a9a), .16,.14,.02, -.36,0,0)); }
+  else if(kind === 'gunstar'){ m = mesh(G.star, toon(0xffe14d,{ emissive:0x886600 }), .26,.26,.26); }
+  else if(kind === 'ultstar'){ m = new THREE.Group(); m.add(mesh(G.star, toon([0xff5a5a,0xffa03a,0xffe14d,0x5ad07a,0x5aa8ff,0xa86aff][Math.floor(Math.random()*6)],{ emissive:0x553300 }), .7,.7,.7));
+    const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map:glowTexture('#fff3a0'), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending })); gl.scale.set(2.6,2.6,1); gl.userData.ownMat = true; m.add(gl); }
+  else if(kind === 'blackhole'){ m = new THREE.Group(); m.add(mesh(G.sphere, basic(0x0d0618), .55,.55,.55));
+    for(const [r, c, rx] of [[.95, 0x8a5aff, 1.25], [1.25, 0xff5ad8, 1.1], [.75, 0x5ad8ff, 1.4]]){ const t = new THREE.Mesh(new THREE.TorusGeometry(r, .06, 6, 32), new THREE.MeshBasicMaterial({ color:c, transparent:true, opacity:.85 })); t.rotation.x = rx; t.userData.ownGeo = true; t.userData.ownMat = true; m.add(t); }
+    const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map:glowTexture('#a87aff'), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending })); gl.scale.set(3.4,3.4,1); gl.userData.ownMat = true; m.add(gl); }
   else if(kind === 'rocket'){ m = new THREE.Group(); const b = mesh(G.cyl, toon(0xffffff), .16,.7,.16); b.rotation.z = Math.PI/2; m.add(b); const n = mesh(G.cone, toon(0xff5a4a), .16,.3,.16, .5,0,0); n.rotation.z = -Math.PI/2; m.add(n);
     for(const s of [-1,1]) m.add(mesh(G.box, toon(0xff5a4a), .2,.06,.02, -.3,s*.16,0)); m.add(mesh(G.box, toon(0x3d84c0), .12,.18,.18, .1,0,0)); }
   else if(kind === 'meteor'){ m = new THREE.Group(); m.add(mesh(G.dodeca, toon(0x8a5a3a), .45,.45,.45)); m.add(mesh(G.sphere, toon(0xffa03a,{ emissive:0xcc5500 }), .38,.38,.38, .12,.12,.15)); }
@@ -3145,7 +3245,7 @@ function spawnShot(kind, x, y, vx, vy, opt={}){
     for(let i=0;i<6;i++){ const r = .25 + i*.18; const t = new THREE.Mesh(new THREE.TorusGeometry(r, .07 + i*.015, 6, 18), mt); t.rotation.x = Math.PI/2; t.position.y = i*.42; t.userData.ownGeo = true; m.add(t); } m.material = mt; }
   else if(kind === 'fishball'){ m = new THREE.Group(); m.add(mesh(G.sphere, toon(0xfbf6ea), .3,.28,.3)); m.add(mesh(G.sphereLo, toon(0xe8d8b8), .1,.04,.1, 0,.26,0)); }
   else if(kind === 'yoyo'){ m = new THREE.Group(); for(const z of [-.06,.06]){ const d = mesh(G.cyl, toon(0xff6b9a), .24,.07,.24, 0,0,z); d.rotation.x = Math.PI/2; m.add(d); } }
-  if(kind !== 'puff' && kind !== 'wind' && kind !== 'tornado') addOutline(m, .04);
+  if(!['puff','wind','tornado','blackhole','ultstar'].includes(kind)) addOutline(m, .04);
   scene.add(m);
   if(kind === 'yoyo'){ const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color:0x1f2a5a })); line.frustumCulled = false; scene.add(line); m.userData.line = line; }
   const s = { kind, pierceAll:!!opt.pierce, quick:!!opt.quick, x, y, vx, vy, life:opt.life ?? 1, dmg:opt.dmg ?? 1, friendly:!!opt.friendly, r:opt.r ?? .3, grav:opt.grav || 0, mesh:m, dead:false, t:0,
@@ -3179,6 +3279,12 @@ function updateShots(dt){
     if(s.kind === 'shrimp' && Math.random() < .5) emit(s.x - Math.sign(s.vx)*.3, s.y, 0, 0, .5, 0, .3, '#ffd08a', .2);
     if(s.kind === 'ice' && Math.random() < .5) emit(s.x, s.y, 0, 0, 0, 0, .25, '#e6f7ff', .2);
     if(s.kind === 'rocket'){ s.vx += Math.sign(s.vx)*28*dt; if(Math.abs(s.vx) > 22) s.vx = Math.sign(s.vx)*22; emit(s.x - Math.sign(s.vx)*.5, s.y, 0, -Math.sign(s.vx)*2, (Math.random()-.5), 0, .35, Math.random() < .5 ? '#ffb02e' : '#cfd6e6', .3); }
+    if(s.kind === 'ultstar'){ for(let i=0;i<2;i++) emit(s.x - s.vx*.03, s.y - s.vy*.03, .2, -s.vx*.1 + (Math.random()-.5)*2, -s.vy*.1, 0, .4, ['#ff5a5a','#ffa03a','#ffe14d','#5ad07a','#5aa8ff','#a86aff'][Math.floor(Math.random()*6)], .45); }
+    if(s.kind === 'gunstar' && Math.random() < .5) emit(s.x, s.y, 0, -s.vx*.05, 0, 0, .2, s.col || '#ffe14d', .2);
+    if(s.kind === 'blackhole'){ s.vx *= Math.pow(.5, dt); if(s.t % .25 < dt) s.set.clear();
+      for(const e of enemies){ if(e.dead || e.d.invul) continue; const dx = s.x - e.x, dy = s.y - (e.y + e.h/2), d = Math.hypot(dx, dy); if(d < 4.5){ e.x += dx/Math.max(d,.3)*6*dt; e.y += dy/Math.max(d,.3)*6*dt; e.frozen = Math.max(e.frozen, .15); } }
+      for(let i=0;i<3;i++){ const a = Math.random()*Math.PI*2, r = 2 + Math.random()*1.5; emit(s.x + Math.cos(a)*r, s.y + Math.sin(a)*r, .2, -Math.cos(a)*r*3, -Math.sin(a)*r*3, 0, .3, Math.random() < .5 ? '#a87aff' : '#ff8ad8', .28); }
+      if(s.life <= dt*1.5){ explode(s.x, s.y, 2.8, 6, true); ring(s.x, s.y, '#c9b0ff', 30, 10, .4); screenFlash('#e6d8ff', .4); removeShot(s); continue; } }
     if(s.kind === 'meteor'){ for(let i=0;i<2;i++) emit(s.x - s.vx*.03, s.y - s.vy*.03, 0, -s.vx*.1 + (Math.random()-.5), -s.vy*.1, 0, .35, Math.random() < .5 ? '#ffb02e' : '#ff6a2b', .38); }
     if(s.kind === 'tornado'){ if(s.t % .3 < dt) s.set.clear();
       for(const e of enemies){ if(e.dead || e.d.invul) continue; const dx = s.x - e.x; if(Math.abs(dx) < 2.2 && Math.abs(e.y - s.y) < 2.6){ e.x += dx*2.5*dt; e.y += 3*dt; e.frozen = Math.max(e.frozen, .1); } }
@@ -3186,10 +3292,11 @@ function updateShots(dt){
     if((s.kind === 'bomb' || s.kind === 'bombH') && Math.random() < .6) emit(s.x, s.y + .3, 0, 0, 1, 0, .2, '#ffb02e', .15);
     if(s.life <= 0){ if(s.kind === 'rocket') explode(s.x, s.y, 2.6, 5, true); else if(s.kind === 'bomb') explode(s.x, s.y, 1.8, 4, true); else if(s.kind === 'bombH') explode(s.x, s.y, 1.4, 1, false); removeShot(s); continue; }
     const t = lvl.get(Math.floor(s.x), Math.floor(s.y));
-    if(s.kind === 'tornado'){ if(solidT(t)) { s.y = Math.floor(s.y) + 1; } }
+    if(s.kind === 'tornado' || s.kind === 'blackhole'){ if(solidT(t)) { s.y = Math.floor(s.y) + 1; } }
     else if(solidT(t) && !s.boomerang){
       if(s.kind === 'rocket'){ explode(s.x, s.y, 2.6, 5, true); removeShot(s); continue; }
       if(s.kind === 'meteor'){ explode(s.x, s.y + .4, 1.7, 3, true); removeShot(s); continue; }
+      if(s.kind === 'ultstar'){ explode(s.x, s.y + .4, 1.8, 5, true); removeShot(s); continue; }
       if(s.kind === 'bomb'){ explode(s.x, s.y + .3, 1.8, 4, true); removeShot(s); continue; }
       if(s.kind === 'bombH'){ explode(s.x, s.y + .3, 1.4, 1, false); removeShot(s); continue; }
       if(s.maxBounces && s.vy < 0 && s.bounces < s.maxBounces && t !== BLOCK){ s.bounces++; s.y = Math.floor(s.y) + 1.01; s.vy = s.bounceV; sfx.flap(); continue; }
@@ -3198,6 +3305,7 @@ function updateShots(dt){
     }
     const box = { x:s.x, w:s.r*2, y:s.y - s.r, h:s.r*2 };
     if(s.friendly){
+      if(s.kind === 'ultstar') continue;
       if(s.kind === 'rocket' || s.kind === 'meteor'){ if(enemies.some(e => !e.dead && aabb(box, e)) || (boss && arena && arena.active && !boss.dead && aabb(box, boss))){ explode(s.x, s.y, s.kind === 'rocket' ? 2.6 : 1.7, s.dmg, true); removeShot(s); } continue; }
       if(s.kind === 'bomb'){ if(enemies.some(e => !e.dead && aabb(box, e)) || (boss && arena && arena.active && !boss.dead && aabb(box, boss))){ explode(s.x, s.y, 1.8, 4, true); removeShot(s); } continue; }
       const pierce = s.boomerang || s.pierceAll;
@@ -3348,7 +3456,7 @@ function updateCutscene(dt){
 function updateBossBar(){ $('bossfill').style.width = (boss ? Math.max(0, boss.hp/boss.max*100) : 0) + '%'; }
 function damageBoss(d){
   if(!boss || boss.dead) return;
-  boss.hp -= d; boss.hurtT = .25; sfx.hit(); updateBossBar(); addShake(.15); popNum(boss.x, boss.y + boss.h + .3, d, d >= 4);
+  boss.hp -= d; boss.hurtT = .25; sfx.hit(); updateBossBar(); addShake(.15); popNum(boss.x, boss.y + boss.h + .3, d, d >= 4); gainEnergy(d*2);
   burst(boss.x, boss.y + boss.h*.6, ['#ffffff','#ffe14d'], 8, 4);
   if(boss.hp <= 0){
     boss.dead = true; boss.deadT = 0; sfx.die(); addShake(.6); hitStop = .35; Music.stop();
@@ -3473,7 +3581,10 @@ function updateBoss(dt){
     if(b.minionT <= 0){ bossMinion(['flame','frog','archer']); b.minionT = 8; }
   }
   if(!b.def.fly){ const lo = arena.x0 + 1 + b.w/2, hi = arena.x1 - b.w/2; if(b.x < lo || b.x > hi){ b.x = clamp(b.x, lo, hi); b.hitWall = true; if(b.st === 'dash'){ b.st = 'walk'; b.stT = 0; b.vx = 0; } } }
-  if(P && !P.dead && aabb(P, b)){ if(P.stone && b.tickCD <= 0){ damageBoss(3); b.tickCD = .6; } else hurtPlayer(b.x); }
+  if(P && !P.dead && aabb(P, b)){
+    if(P.stone && b.tickCD <= 0){ damageBoss(3); b.tickCD = .6; }
+    else if(P.vy < 0 && P.y > b.y + b.h*.5){ damageBoss(2); P.vy = 12; P.airJumps = 0; P.inv = Math.max(P.inv, .4); sfx.spring(); ring(P.x, P.y, '#ffffff', 14, 6, .3); }   // 踩魔王的頭
+    else hurtPlayer(b.x); }
 }
 
 /* =====================================================================
@@ -3673,6 +3784,9 @@ function animateWorld(dt){
     setFlash(e.mats, e.hurtT > .12);
     e.ice.visible = e.frozen > 0;
     const u = m.userData;
+    // v2.7 被踩翻倒：四腳朝天，快起身時抖動
+    if(e.flipT > 0){ m.rotation.z = Math.PI + (e.flipT < .9 ? Math.sin(e.t*40)*.25 : 0); m.position.y += e.h*.95; m.scale.set(1.1, .8, 1.1); }
+    else if(m.scale.y < .99 && e.d.move !== 'hop' && !(e.hurtT > 0)) m.scale.setScalar(1);
     if(u.feet && e.d.move !== 'hop'){ const w = Math.sin(e.t*9)*.06; u.feet[0].position.z = .05 + w; u.feet[1].position.z = .05 - w; }
     e.blinkT -= dt;
     if(u.eyes){
@@ -3802,7 +3916,7 @@ function updateCamera(dt, demo=false){
 /* ── 提示文字：觸控時把按鍵名稱換成畫面按鈕 ── */
 function adaptKeys(t){
   if(!touchVisible()) return t;
-  return t.replace(/← →/g, '◀ ▶').replace(/空白鍵跳/g, '按「跳」跳起來').replace(/空白鍵/g, '「跳」').replace(/按住 J/g, '按住「吸」').replace(/按 J/g, '按「吸」').replace(/再按 J/g, '再按「吸」').replace(/J /g, '「吸」').replace(/按 ↓/g, '按「吞」').replace(/↓ /g, '「吞」').replace(/K 丟掉/g, '「丟」丟掉');
+  return t.replace(/← →/g, '◀ ▶').replace(/空白鍵跳/g, '按「跳」跳起來').replace(/空白鍵/g, '「跳」').replace(/按住 J/g, '按住「攻擊」').replace(/按 J/g, '按「攻擊」').replace(/再按 J/g, '再按「攻擊」').replace(/按 L/g, '按「大招」').replace(/J /g, '「攻擊」').replace(/按 ↓/g, '按「吞」').replace(/↓ /g, '「吞」').replace(/K 丟掉/g, '「丟」丟掉');
 }
 /* ── HUD ── */
 let lastHud = '';
@@ -3817,8 +3931,10 @@ function updateHUD(force=false){
   $('abIcon').textContent = ab ? ab.icon : (P.mouth ? '😮' : '○');
   $('abIcon').style.background = ab ? ab.css : '';
   $('abName').textContent = ab ? (ab.snack ? `${ab.name}（${SNACKS[P.ability].name}）` : ab.name) : (P.mouth ? '嘴巴塞滿了' : '沒有能力');
-  $('abHint').textContent = adaptKeys(ab ? ab.hint + '　K 丟掉' : (P.mouth ? (P.mouth === 'none' ? 'J 吐星星' : 'J 吐星星　↓ 吞下得能力') : '按住 J 吸住敵人'));
+  $('abHint').textContent = adaptKeys(ab ? ab.hint + '　K 丟掉' : '踩敵人、踢飛牠，或碰武器星星');
+  updateEnergy();
 }
+function updateEnergy(){ const f = $('enFill'); if(!f) return; f.style.width = energy + '%'; $('energy').classList.toggle('full', energy >= 100); $('enTxt').textContent = energy >= 100 ? (touchVisible() ? '大招 OK！按「大招」' : '大招 OK！按 L') : '大招'; }
 let _lastSec = -1;
 function updateTimer(){ const s = Math.floor(levelTime); if(s !== _lastSec){ _lastSec = s; $('timer').textContent = fmtTime(levelTime); } }
 let toastTimer = 0;
@@ -3852,10 +3968,10 @@ function irisClear(){ iris.classList.remove('on','anim'); }
 /* =====================================================================
    輸入：鍵盤、觸控、手把
    ===================================================================== */
-const keys = { left:false, right:false, jump:false, down:false, atk:false, drop:false, emote:false };
+const keys = { left:false, right:false, jump:false, down:false, atk:false, drop:false, emote:false, ult:false };
 const justPressed = new Set();
 const KEYMAP = { ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right', ArrowUp:'jump', KeyW:'jump', Space:'jump',
-                 ArrowDown:'down', KeyS:'down', KeyJ:'atk', KeyX:'atk', KeyK:'drop', KeyC:'drop', KeyE:'emote' };
+                 ArrowDown:'down', KeyS:'down', KeyJ:'atk', KeyX:'atk', KeyK:'drop', KeyC:'drop', KeyE:'emote', KeyL:'ult', KeyQ:'ult', KeyV:'ult' };
 function press(k){ if(!keys[k]) justPressed.add(k); keys[k] = true; }
 function release(k){ keys[k] = false; }
 function releaseAll(){ Object.keys(keys).forEach(release); justPressed.clear(); }
@@ -3887,7 +4003,7 @@ function pollGamepad(){
   if(!gp) return;
   const b = i => !!(gp.buttons[i] && gp.buttons[i].pressed);
   const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
-  const cur = { left: b(14) || ax < -.4, right: b(15) || ax > .4, jump: b(0) || b(12), down: b(13) || ay > .6, atk: b(2) || b(1), drop: b(3), emote: b(4) || b(5) };
+  const cur = { left: b(14) || ax < -.4, right: b(15) || ax > .4, jump: b(0) || b(12), down: b(13) || ay > .6, atk: b(2) || b(1), drop: b(3), emote: b(4), ult: b(5) || b(7) };
   for(const k of Object.keys(cur)){ if(cur[k] && !padPrev[k]) press(k); if(!cur[k] && padPrev[k]) release(k); padPrev[k] = cur[k]; }
   const start = b(9);
   if(start && !padPrev.start){ if(state === 'playing') pauseGame(); else if(state === 'paused') resumeGame(); else if(state === 'title' && $('map').hidden) openPanel('map'); }
@@ -4118,7 +4234,7 @@ boot();
 // 測試／除錯用
 window.__dq = { get state(){ return state; }, get P(){ return P; }, get enemies(){ return enemies; }, get boss(){ return boss; }, get arena(){ return arena; },
   get items(){ return items; }, get shots(){ return shots; }, get door(){ return door; }, get lvl(){ return lvl; }, get charState(){ return charState; },
-  startLevel, loadLevel, gainAbility, damageBoss, hurtPlayer, eatSnack, keys, press, release, Music, SAVE, VERSION, BUILD_DATE, getPivots, get charTemplate(){ return charTemplate; }, get world(){ return world; }, THREE };
+  startLevel, loadLevel, gainAbility, gainEnergy, damageBoss, hurtPlayer, eatSnack, keys, press, release, Music, SAVE, VERSION, BUILD_DATE, getPivots, get charTemplate(){ return charTemplate; }, get world(){ return world; }, THREE };
 
 </script>
 </body>

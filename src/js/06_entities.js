@@ -6,6 +6,8 @@ let P = null;
 let enemies = [], items = [], shots = [], fx = [], springs = [], movers = [], checkpoints = [], signs = [];
 let boss = null, arena = null, door = null;
 let lives = 3, starCount = 0, levelStars = 0, deathT = 0, clearing = false;
+let energy = 0;   // v2.7 大招能量 0～100
+function gainEnergy(n){ if(energy >= 100) return; energy = Math.min(100, energy + n); if(energy >= 100){ toast('⭐ 大招準備好了！按 L 放大招'); sfx.ability(); } updateEnergy(); }
 let levelTime = 0, levelDeaths = 0, enemiesDefeated = 0, snacksFound = new Set(), collected = new Set();
 let respawnPt = null;
 let camX = 10, camY = 7, demoT = 0, shakeAmp = 0, hitStop = 0;
@@ -284,15 +286,24 @@ function updatePlayer(dt, first){
     else if(ab === 'umbrella'){ if(p.atkCD <= 0){ startAttack('umbrella', .28); p.atkCD = .34; sfx.slash(); } }
     else if(ab === 'yoyo'){ if(p.atkCD <= 0 && !shots.some(s => s.kind === 'yoyo')){ const m = mouthPos(); spawnShot('yoyo', m.x, m.y, p.face*15, 0, { friendly:true, dmg:2, life:1.2, r:.32, boomerang:true, quick:true }); p.atkCD = .3; sfx.flap(); } }
     else if(ab === 'thunder'){ if(p.atkCD <= 0){ thunderStrike(); p.atkCD = .6; } }
+    else if(ab === 'blackhole'){ if(p.atkCD <= 0 && !shots.some(s => s.kind === 'blackhole')){ const m = mouthPos(); spawnShot('blackhole', m.x + p.face*.8, m.y + .3, p.face*3.2, 0, { friendly:true, dmg:1, life:2.2, r:.6, pierce:true }); p.atkCD = .6; sfx.zap(); screenFlash('#c9b0ff', .25); } }
+    else if(ab === 'icestorm'){ if(p.atkCD <= 0){ iceStorm(); p.atkCD = .8; } }
     else if(ab === 'rocket'){ if(p.atkCD <= 0 && shots.filter(s => s.kind === 'rocket').length < 2){ const m = mouthPos(); spawnShot('rocket', m.x, m.y + .1, p.face*8, 0, { friendly:true, dmg:5, life:1.6, r:.32 }); p.atkCD = .5; sfx.boom(); addShake(.12); burst(m.x - p.face*.4, m.y, ['#ffffff','#cfd6e6'], 10, 3, .35, .4); } }
     else if(ab === 'meteor'){ if(p.atkCD <= 0){ meteorShower(); p.atkCD = 1.0; } }
     else if(ab === 'tornado'){ if(p.atkCD <= 0 && !shots.some(s => s.kind === 'tornado')){ spawnShot('tornado', p.x + p.face*1.2, p.y + .1, p.face*5.5, 0, { friendly:true, dmg:1, life:2.4, r:.8, pierce:true }); p.atkCD = .5; sfx.puff(); sfx.flap(); } }
     else if(ab === 'rainbow'){ if(p.atkCD <= 0){ fireRainbow(); p.atkCD = .9; } }
     else if(ab === 'guoshao'){ if(p.atkCD <= 0){ if(!p.orbs.length) summonOrbs(); else launchOrbs(); p.atkCD = .3; } }
     else if(ab === 'wangguo'){ p.shieldUp = true; p.shieldT = 0; }
-    else if(!ab) p.inhaleArmed = true;
+    else if(!ab && p.atkCD <= 0){ p.atkCD = .6; toast('先踩敵人、踢飛牠，或找武器星星！'); }
   }
+  if(ab === 'stargun' && keys.atk && p.atkCD <= 0){ const m = mouthPos(), c = ['#ff5a5a','#ffa03a','#ffe14d','#5ad07a','#5aa8ff','#a86aff'];
+    const sh = spawnShot('gunstar', m.x, m.y + (Math.random()-.5)*.25, p.face*19, (Math.random()-.5)*2.2, { friendly:true, dmg:1, life:.55, r:.26 }); sh.col = c[Math.floor(Math.random()*6)];
+    sh.mesh.traverse(o => { if(o.isMesh && !o.userData.isOutline) o.material = toon(new THREE.Color(sh.col).getHex(), { emissive:0x332200 }); });
+    p.atkCD = .075; if(Math.random() < .5) sfx.flap(); emit(m.x, m.y, .2, p.face*3, (Math.random()-.5)*2, 0, .15, '#fff6c0', .3); }
   if(p.atkCD > cd0 && !p.atk && p.dashT <= 0 && p.spinT <= 0) p.throwT = .22;
+  // 大招
+  if(first && consume('ult')) ultimate();
+  if(p.ultT > 0) updateUltimate(dt);
   p.throwT = Math.max(0, (p.throwT || 0) - dt);
   // 鍋燒意麵：魚丸繞著身體轉，碰到敵人會打、碰到子彈會擋掉
   if(p.orbs.length){
@@ -367,8 +378,10 @@ function updatePlayer(dt, first){
   }
   // 冰凍敵人：踢出去
   for(const e of enemies){
-    if(e.dead || e.frozen <= 0 || e.kicked || !aabb(p, e)) continue;
-    e.kicked = true; e.frozen = 4; e.vx = p.face*11; e.vy = 2; sfx.hit();
+    if(e.dead || e.kicked || !aabb(p, e) || !(e.frozen > 0 || e.flipT > 0)) continue;
+    if(e.flipT > 0 && p.vy < 0 && p.y > e.y + e.h*.4) continue;   // 從上面又踩到：交給踩的判定
+    e.kicked = true; e.flipT = 0; e.frozen = 4; e.vx = (Math.sign(e.x - p.x) || p.face)*11; e.vy = 3; sfx.hit(); gainEnergy(4);
+    burst(e.x, e.y + .4, ['#ffffff','#ffe14d'], 12, 5, .3, .4); popNum(e.x, e.y + e.h + .2, '踢', false);
   }
   // 尖刺、掉落
   const tx0 = Math.floor(p.x - p.w/2 + .1), tx1 = Math.floor(p.x + p.w/2 - .1), ty = Math.floor(p.y + .2);
@@ -394,7 +407,7 @@ function updatePlayer(dt, first){
   // 道具
   for(const it of items){
     if(it.dead || !aabb(p, it)) continue;
-    if(it.type === 'star'){ removeItem(it); collected.add(it.id); starCount++; levelStars++; sfx.coin(); burst(it.x, it.y+.3, ['#ffd43b','#ffffff'], 6, 2.5, .22, .3);
+    if(it.type === 'star'){ removeItem(it); collected.add(it.id); starCount++; levelStars++; gainEnergy(6); sfx.coin(); burst(it.x, it.y+.3, ['#ffd43b','#ffffff'], 6, 2.5, .22, .3);
       if(starCount % 40 === 0){ lives++; toast('星星 40 顆！生命 +1'); } updateHUD(true); }
     else if(SNACKS[it.type]){ removeItem(it); if(!it.drop) collected.add(it.id); eatSnack(it.type, it.drop); }
     else if(it.type === 'life'){ removeItem(it); collected.add(it.id); lives++; sfx.heal(); toast('生命 +1'); updateHUD(true); }
@@ -522,6 +535,42 @@ function fireRainbow(){
   for(let i=0;i<26;i++){ const c = ['#ff5a5a','#ffa03a','#ffe14d','#5ad07a','#5aa8ff','#a86aff'][i%6]; emit(m.x + f*Math.random()*len, m.y + (Math.random() - .5)*1.2, .3, f*2, (Math.random() - .5)*3, 0, .5, c, .3); }
   ring(m.x, m.y, '#ffffff', 14, 5, .3); screenFlash('#ffe6fa', .3); sfx.zap(); sfx.ability(); addShake(.18);
 }
+function iceStorm(){
+  const f = P.face, x0 = P.x, y0 = P.y;
+  for(let i=0;i<7;i++) setTimeout(() => { if(!P || P.dead || state !== 'playing') return;
+    const x = x0 + f*(1.3 + i*1.15); let gy = y0; for(let y = Math.floor(y0 + 2); y > 0; y--) if(solidT(lvl.get(Math.floor(x), y - 1))){ gy = y; break; }
+    const g = new THREE.Group(); for(const [dx, h, w] of [[0, 2.2, .45], [-.35, 1.3, .28], [.35, 1.5, .3]]) g.add(mesh(G.cone, toon(0xbfeeff,{ emissive:0x2a6a9a }), w,h,w, dx,h/2,0));
+    addOutline(g, .03); g.position.set(x, gy, 0); g.scale.y = .01; scene.add(g);
+    fx.push({ mesh:g, t:0, life:.7, update:(fo, k) => { fo.mesh.scale.y = k < .15 ? k/.15 : k > .75 ? (1 - k)/.25 : 1; } });
+    hitArea({ x, w:1.2, y:gy, h:2.3 }, 3, x0, { set:new Set(), freeze:2.5 });
+    burst(x, gy + .3, ['#ffffff','#bfeeff','#9fe3ff'], 12, 5, .3, .45); sfx.zap(); addShake(.08); }, i*75);
+  screenFlash('#dff6ff', .25);
+}
+// ── v2.7 大招：全畫面攻擊 ──
+function ultimate(){
+  if(energy < 100 || !P || P.dead || P.ultT > 0) return;
+  energy = 0; updateEnergy();
+  P.ultT = 2.4; P.ultK = 0; P.inv = Math.max(P.inv, 3.2); P.emote = null;
+  const el = document.getElementById('ultFx'); if(el){ el.classList.remove('go'); void el.offsetWidth; el.classList.add('go'); }
+  screenFlash('#ffffff', .9); addShake(.5); hitStop = .25; sfx.boss(); sfx.ability(); Music.duck && Music.duck(false);
+  ring(P.x, P.y + .6, '#ffe14d', 40, 14, .5); ring(P.x, P.y + .6, '#ff8ad8', 30, 10, .45);
+}
+function updateUltimate(dt){
+  const p = P; p.ultT -= dt; p.ultK += dt;
+  const half = 15;
+  // 彩虹流星雨
+  if(Math.random() < dt*22) spawnShot('ultstar', camX + (Math.random() - .3)*half*2 - 4, camY + 11 + Math.random()*3, 5 + Math.random()*3, -16 - Math.random()*5, { friendly:true, dmg:4, life:2.5, r:.6 });
+  // 閃電
+  if(Math.random() < dt*3.5) lightning(camX + (Math.random() - .5)*half*1.6);
+  // 1.2 秒時全畫面重擊
+  if(!p.ultHit && p.ultK > 1.2){ p.ultHit = true;
+    for(const e of enemies) if(!e.dead && Math.abs(e.x - camX) < half + 2) damageEnemy(e, 12, p.x);
+    if(boss && arena && arena.active && !boss.dead) damageBoss(10);
+    screenFlash('#fffbe0', 1); addShake(.7); sfx.boom(); sfx.boom();
+    for(let i=0;i<5;i++) ring(camX + (i - 2)*6, camY, ['#ff5a5a','#ffe14d','#5ad07a','#5aa8ff','#a86aff'][i], 36, 16, .5);
+  }
+  if(p.ultT <= 0){ p.ultHit = false; }
+}
 // 畫面閃一下
 function screenFlash(color, a){ const el = document.getElementById('flashFx'); if(!el) return; el.style.transition = 'none'; el.style.background = color; el.style.opacity = a; void el.offsetWidth; el.style.transition = 'opacity .25s ease-out'; el.style.opacity = 0; }
 // 傷害數字
@@ -578,7 +627,8 @@ function spawnEnemy(type, x, y, opt={}){
 }
 function disposeEnemy(e){ scene.remove(e.mesh); e.mats.forEach(m => m.dispose()); e.ice.material.dispose(); }
 function killEnemy(e){
-  if(e.dead) return; e.dead = true; enemiesDefeated++;
+  if(e.dead) return; e.dead = true; enemiesDefeated++; gainEnergy(12);
+  if(e.d.ability && !e.minionNoDrop && Math.random() < .75){ const it = spawnItem('abil', e.x, e.y + .6, { ability:e.d.ability, life:10 }); it.vy = 7; it.vx = 0; it.t = .5; }
   burst(e.x, e.y + e.h/2, ['#ffffff','#ffcf3f','#ff9ec4'], 22, 6, .36);
   for(let i=0;i<5;i++){ const a = i/5*Math.PI*2; emit(e.x, e.y + e.h/2, .3, Math.cos(a)*7, Math.sin(a)*7, 0, .35, '#fff6a0', .5, 0, 4); }
   disposeEnemy(e); sfx.pop(); hitStop = Math.max(hitStop, .06); addShake(.12);
@@ -605,6 +655,12 @@ function updateEnemy(e, dt){
     for(const o of enemies){ if(o !== e && !o.dead && aabb(o, e)){ damageEnemy(o, 3, e.x); killEnemy(e); return; } }
     if(boss && arena && arena.active && !boss.dead && aabb(e, boss)){ damageBoss(3); killEnemy(e); return; }
     if(e.hitWall || e.y < -4){ killEnemy(e); }
+    return;
+  }
+  if(e.flipT > 0){
+    e.flipT -= dt; e.vx *= Math.pow(.05, dt);
+    if(e.d.move !== 'fly' && e.d.move !== 'ghost' && e.d.move !== 'bob'){ e.vy -= GRAV*dt; moveBody(e, dt); }
+    if(e.flipT <= 0){ e.flipT = 0; e.vy = 6; burst(e.x, e.y + .5, ['#ffffff'], 6, 2); }   // 起身
     return;
   }
   if(e.frozen > 0){ e.vx *= .9; if(e.d.move !== 'fly' && e.d.move !== 'ghost' && e.d.move !== 'bob'){ e.vy -= GRAV*dt; moveBody(e, dt); } return; }
@@ -657,7 +713,16 @@ function updateEnemy(e, dt){
     }
     if(e.type === 'yoyokid'){ if(e.slashCD <= 0 && adx < 2.8 && ady < 1.3){ e.dir = Math.sign(dxp) || 1; e.slashT = .45; e.slashCD = 1.8; sfx.flap(); }
       if(e.slashT > 0){ e.slashT -= dt; if(aabb({ x:e.x + e.dir*1.4, w:2.4, y:e.y + .2, h:.6 }, P)) hurtPlayer(e.x); } }
-    if(aabb(P, e) && !P.stone) hurtPlayer(e.x);
+    if(aabb(P, e) && !P.stone){
+      // v2.7 從上面踩下去：敵人翻倒（會飛的直接打倒；刺刺怪、鬼魂不能踩）
+      const fromAbove = P.vy < 0 && P.y > e.y + e.h*.45;
+      if(fromAbove && !e.d.invul && e.type !== 'spiky'){
+        P.vy = keys.jump ? 13 : 9.5; P.airJumps = 0; P.puffed = false; P.y = e.y + e.h;
+        sfx.spring(); burst(e.x, e.y + e.h, ['#ffffff','#ffe14d'], 10, 4, .3, .35); ring(e.x, e.y + e.h, '#ffffff', 12, 5, .25); addShake(.08); gainEnergy(5);
+        if(e.d.move === 'fly' || e.d.move === 'bob' || e.d.move === 'drift') damageEnemy(e, 99, P.x);
+        else { e.flipT = 3.2; e.vx = 0; e.slashT = 0; e.charge = 0; e.drawT = 0; popNum(e.x, e.y + e.h + .3, '翻', false); }
+      } else hurtPlayer(e.x);
+    }
   }
 }
 
@@ -720,6 +785,12 @@ function spawnShot(kind, x, y, vx, vy, opt={}){
   else if(kind === 'wave'){ m = mesh(G.cone, toon(0xffb02e,{ emissive:0xaa4400 }), .3,.7,.3); }
   else if(kind === 'shuriken' || kind === 'shurikenH'){ m = new THREE.Group(); const c = kind === 'shuriken' ? 0xcfd6e6 : 0x5a5f7a; m.add(mesh(G.box, toon(c), .55,.14,.06)); m.add(mesh(G.box, toon(c), .14,.55,.06)); addc(m, mesh(G.cyl, toon(0x3a3f5c), .08,.08,.08)).rotation.x = Math.PI/2; }
   else if(kind === 'arrow' || kind === 'arrowH'){ m = new THREE.Group(); const sh = mesh(G.cyl, toon(0x9a6a3a), .03,.8,.03); sh.rotation.z = Math.PI/2; m.add(sh); const hd = mesh(G.cone, toon(0xcfd6e6), .08,.2,.08, .45,0,0); hd.rotation.z = -Math.PI/2; m.add(hd); m.add(mesh(G.box, toon(kind === 'arrow' ? 0xff6b6b : 0x6a3a9a), .16,.14,.02, -.36,0,0)); }
+  else if(kind === 'gunstar'){ m = mesh(G.star, toon(0xffe14d,{ emissive:0x886600 }), .26,.26,.26); }
+  else if(kind === 'ultstar'){ m = new THREE.Group(); m.add(mesh(G.star, toon([0xff5a5a,0xffa03a,0xffe14d,0x5ad07a,0x5aa8ff,0xa86aff][Math.floor(Math.random()*6)],{ emissive:0x553300 }), .7,.7,.7));
+    const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map:glowTexture('#fff3a0'), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending })); gl.scale.set(2.6,2.6,1); gl.userData.ownMat = true; m.add(gl); }
+  else if(kind === 'blackhole'){ m = new THREE.Group(); m.add(mesh(G.sphere, basic(0x0d0618), .55,.55,.55));
+    for(const [r, c, rx] of [[.95, 0x8a5aff, 1.25], [1.25, 0xff5ad8, 1.1], [.75, 0x5ad8ff, 1.4]]){ const t = new THREE.Mesh(new THREE.TorusGeometry(r, .06, 6, 32), new THREE.MeshBasicMaterial({ color:c, transparent:true, opacity:.85 })); t.rotation.x = rx; t.userData.ownGeo = true; t.userData.ownMat = true; m.add(t); }
+    const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map:glowTexture('#a87aff'), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending })); gl.scale.set(3.4,3.4,1); gl.userData.ownMat = true; m.add(gl); }
   else if(kind === 'rocket'){ m = new THREE.Group(); const b = mesh(G.cyl, toon(0xffffff), .16,.7,.16); b.rotation.z = Math.PI/2; m.add(b); const n = mesh(G.cone, toon(0xff5a4a), .16,.3,.16, .5,0,0); n.rotation.z = -Math.PI/2; m.add(n);
     for(const s of [-1,1]) m.add(mesh(G.box, toon(0xff5a4a), .2,.06,.02, -.3,s*.16,0)); m.add(mesh(G.box, toon(0x3d84c0), .12,.18,.18, .1,0,0)); }
   else if(kind === 'meteor'){ m = new THREE.Group(); m.add(mesh(G.dodeca, toon(0x8a5a3a), .45,.45,.45)); m.add(mesh(G.sphere, toon(0xffa03a,{ emissive:0xcc5500 }), .38,.38,.38, .12,.12,.15)); }
@@ -727,7 +798,7 @@ function spawnShot(kind, x, y, vx, vy, opt={}){
     for(let i=0;i<6;i++){ const r = .25 + i*.18; const t = new THREE.Mesh(new THREE.TorusGeometry(r, .07 + i*.015, 6, 18), mt); t.rotation.x = Math.PI/2; t.position.y = i*.42; t.userData.ownGeo = true; m.add(t); } m.material = mt; }
   else if(kind === 'fishball'){ m = new THREE.Group(); m.add(mesh(G.sphere, toon(0xfbf6ea), .3,.28,.3)); m.add(mesh(G.sphereLo, toon(0xe8d8b8), .1,.04,.1, 0,.26,0)); }
   else if(kind === 'yoyo'){ m = new THREE.Group(); for(const z of [-.06,.06]){ const d = mesh(G.cyl, toon(0xff6b9a), .24,.07,.24, 0,0,z); d.rotation.x = Math.PI/2; m.add(d); } }
-  if(kind !== 'puff' && kind !== 'wind' && kind !== 'tornado') addOutline(m, .04);
+  if(!['puff','wind','tornado','blackhole','ultstar'].includes(kind)) addOutline(m, .04);
   scene.add(m);
   if(kind === 'yoyo'){ const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color:0x1f2a5a })); line.frustumCulled = false; scene.add(line); m.userData.line = line; }
   const s = { kind, pierceAll:!!opt.pierce, quick:!!opt.quick, x, y, vx, vy, life:opt.life ?? 1, dmg:opt.dmg ?? 1, friendly:!!opt.friendly, r:opt.r ?? .3, grav:opt.grav || 0, mesh:m, dead:false, t:0,
@@ -761,6 +832,12 @@ function updateShots(dt){
     if(s.kind === 'shrimp' && Math.random() < .5) emit(s.x - Math.sign(s.vx)*.3, s.y, 0, 0, .5, 0, .3, '#ffd08a', .2);
     if(s.kind === 'ice' && Math.random() < .5) emit(s.x, s.y, 0, 0, 0, 0, .25, '#e6f7ff', .2);
     if(s.kind === 'rocket'){ s.vx += Math.sign(s.vx)*28*dt; if(Math.abs(s.vx) > 22) s.vx = Math.sign(s.vx)*22; emit(s.x - Math.sign(s.vx)*.5, s.y, 0, -Math.sign(s.vx)*2, (Math.random()-.5), 0, .35, Math.random() < .5 ? '#ffb02e' : '#cfd6e6', .3); }
+    if(s.kind === 'ultstar'){ for(let i=0;i<2;i++) emit(s.x - s.vx*.03, s.y - s.vy*.03, .2, -s.vx*.1 + (Math.random()-.5)*2, -s.vy*.1, 0, .4, ['#ff5a5a','#ffa03a','#ffe14d','#5ad07a','#5aa8ff','#a86aff'][Math.floor(Math.random()*6)], .45); }
+    if(s.kind === 'gunstar' && Math.random() < .5) emit(s.x, s.y, 0, -s.vx*.05, 0, 0, .2, s.col || '#ffe14d', .2);
+    if(s.kind === 'blackhole'){ s.vx *= Math.pow(.5, dt); if(s.t % .25 < dt) s.set.clear();
+      for(const e of enemies){ if(e.dead || e.d.invul) continue; const dx = s.x - e.x, dy = s.y - (e.y + e.h/2), d = Math.hypot(dx, dy); if(d < 4.5){ e.x += dx/Math.max(d,.3)*6*dt; e.y += dy/Math.max(d,.3)*6*dt; e.frozen = Math.max(e.frozen, .15); } }
+      for(let i=0;i<3;i++){ const a = Math.random()*Math.PI*2, r = 2 + Math.random()*1.5; emit(s.x + Math.cos(a)*r, s.y + Math.sin(a)*r, .2, -Math.cos(a)*r*3, -Math.sin(a)*r*3, 0, .3, Math.random() < .5 ? '#a87aff' : '#ff8ad8', .28); }
+      if(s.life <= dt*1.5){ explode(s.x, s.y, 2.8, 6, true); ring(s.x, s.y, '#c9b0ff', 30, 10, .4); screenFlash('#e6d8ff', .4); removeShot(s); continue; } }
     if(s.kind === 'meteor'){ for(let i=0;i<2;i++) emit(s.x - s.vx*.03, s.y - s.vy*.03, 0, -s.vx*.1 + (Math.random()-.5), -s.vy*.1, 0, .35, Math.random() < .5 ? '#ffb02e' : '#ff6a2b', .38); }
     if(s.kind === 'tornado'){ if(s.t % .3 < dt) s.set.clear();
       for(const e of enemies){ if(e.dead || e.d.invul) continue; const dx = s.x - e.x; if(Math.abs(dx) < 2.2 && Math.abs(e.y - s.y) < 2.6){ e.x += dx*2.5*dt; e.y += 3*dt; e.frozen = Math.max(e.frozen, .1); } }
@@ -768,10 +845,11 @@ function updateShots(dt){
     if((s.kind === 'bomb' || s.kind === 'bombH') && Math.random() < .6) emit(s.x, s.y + .3, 0, 0, 1, 0, .2, '#ffb02e', .15);
     if(s.life <= 0){ if(s.kind === 'rocket') explode(s.x, s.y, 2.6, 5, true); else if(s.kind === 'bomb') explode(s.x, s.y, 1.8, 4, true); else if(s.kind === 'bombH') explode(s.x, s.y, 1.4, 1, false); removeShot(s); continue; }
     const t = lvl.get(Math.floor(s.x), Math.floor(s.y));
-    if(s.kind === 'tornado'){ if(solidT(t)) { s.y = Math.floor(s.y) + 1; } }
+    if(s.kind === 'tornado' || s.kind === 'blackhole'){ if(solidT(t)) { s.y = Math.floor(s.y) + 1; } }
     else if(solidT(t) && !s.boomerang){
       if(s.kind === 'rocket'){ explode(s.x, s.y, 2.6, 5, true); removeShot(s); continue; }
       if(s.kind === 'meteor'){ explode(s.x, s.y + .4, 1.7, 3, true); removeShot(s); continue; }
+      if(s.kind === 'ultstar'){ explode(s.x, s.y + .4, 1.8, 5, true); removeShot(s); continue; }
       if(s.kind === 'bomb'){ explode(s.x, s.y + .3, 1.8, 4, true); removeShot(s); continue; }
       if(s.kind === 'bombH'){ explode(s.x, s.y + .3, 1.4, 1, false); removeShot(s); continue; }
       if(s.maxBounces && s.vy < 0 && s.bounces < s.maxBounces && t !== BLOCK){ s.bounces++; s.y = Math.floor(s.y) + 1.01; s.vy = s.bounceV; sfx.flap(); continue; }
@@ -780,6 +858,7 @@ function updateShots(dt){
     }
     const box = { x:s.x, w:s.r*2, y:s.y - s.r, h:s.r*2 };
     if(s.friendly){
+      if(s.kind === 'ultstar') continue;
       if(s.kind === 'rocket' || s.kind === 'meteor'){ if(enemies.some(e => !e.dead && aabb(box, e)) || (boss && arena && arena.active && !boss.dead && aabb(box, boss))){ explode(s.x, s.y, s.kind === 'rocket' ? 2.6 : 1.7, s.dmg, true); removeShot(s); } continue; }
       if(s.kind === 'bomb'){ if(enemies.some(e => !e.dead && aabb(box, e)) || (boss && arena && arena.active && !boss.dead && aabb(box, boss))){ explode(s.x, s.y, 1.8, 4, true); removeShot(s); } continue; }
       const pierce = s.boomerang || s.pierceAll;

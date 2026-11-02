@@ -1,10 +1,10 @@
 /* =====================================================================
    輸入：鍵盤、觸控、手把
    ===================================================================== */
-const keys = { left:false, right:false, jump:false, down:false, atk:false, drop:false, emote:false };
+const keys = { left:false, right:false, jump:false, down:false, atk:false, drop:false, emote:false, ult:false };
 const justPressed = new Set();
 const KEYMAP = { ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right', ArrowUp:'jump', KeyW:'jump', Space:'jump',
-                 ArrowDown:'down', KeyS:'down', KeyJ:'atk', KeyX:'atk', KeyK:'drop', KeyC:'drop', KeyE:'emote' };
+                 ArrowDown:'down', KeyS:'down', KeyJ:'atk', KeyX:'atk', KeyK:'drop', KeyC:'drop', KeyE:'emote', KeyL:'ult', KeyQ:'ult', KeyV:'ult' };
 function press(k){ if(!keys[k]) justPressed.add(k); keys[k] = true; }
 function release(k){ keys[k] = false; }
 function releaseAll(){ Object.keys(keys).forEach(release); justPressed.clear(); }
@@ -36,7 +36,7 @@ function pollGamepad(){
   if(!gp) return;
   const b = i => !!(gp.buttons[i] && gp.buttons[i].pressed);
   const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
-  const cur = { left: b(14) || ax < -.4, right: b(15) || ax > .4, jump: b(0) || b(12), down: b(13) || ay > .6, atk: b(2) || b(1), drop: b(3), emote: b(4) || b(5) };
+  const cur = { left: b(14) || ax < -.4, right: b(15) || ax > .4, jump: b(0) || b(12), down: b(13) || ay > .6, atk: b(2) || b(1), drop: b(3), emote: b(4), ult: b(5) || b(7) };
   for(const k of Object.keys(cur)){ if(cur[k] && !padPrev[k]) press(k); if(!cur[k] && padPrev[k]) release(k); padPrev[k] = cur[k]; }
   const start = b(9);
   if(start && !padPrev.start){ if(state === 'playing') pauseGame(); else if(state === 'paused') resumeGame(); else if(state === 'title' && $('map').hidden) openPanel('map'); }
@@ -267,4 +267,4 @@ boot();
 // 測試／除錯用
 window.__dq = { get state(){ return state; }, get P(){ return P; }, get enemies(){ return enemies; }, get boss(){ return boss; }, get arena(){ return arena; },
   get items(){ return items; }, get shots(){ return shots; }, get door(){ return door; }, get lvl(){ return lvl; }, get charState(){ return charState; },
-  startLevel, loadLevel, gainAbility, damageBoss, hurtPlayer, eatSnack, keys, press, release, Music, SAVE, VERSION, BUILD_DATE, getPivots, get charTemplate(){ return charTemplate; }, get world(){ return world; }, THREE };
+  startLevel, loadLevel, gainAbility, gainEnergy, damageBoss, hurtPlayer, eatSnack, keys, press, release, Music, SAVE, VERSION, BUILD_DATE, getPivots, get charTemplate(){ return charTemplate; }, get world(){ return world; }, THREE };
