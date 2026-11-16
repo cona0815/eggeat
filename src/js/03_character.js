@@ -2,7 +2,7 @@
    角色：上傳 → 解析 → 轉正縮放 → 自動拆零件 → 自動骨架 → 動作
    ===================================================================== */
 const CHAR_H = 1.55;                // 角色正規化後的高度
-const charState = { files:null, yaw:0, up:'z', name:'', kind:'default', info:null };
+const charState = { files:null, yaw:0, up:'z', name:'', kind:'stick', info:null };   // kind: stick 捏火柴人 / draw 自己畫 / upload 上傳 3D
 let charTemplate = null;            // 已綁好骨架的角色（遊戲與預覽都 clone 它）
 let rawChar = null;                 // 原始模型（未轉正）
 
@@ -338,15 +338,18 @@ async function parseCharacter(files){
 }
 
 function rebuildTemplate(){
-  const built = rawChar ? buildRiggedCharacter(rawChar.clone(true), charState.up, charState.yaw, true)
-                        : buildRiggedCharacter(makeDefaultCharacter(), 'y', 0, false);
+  if(charState.kind === 'upload' && !rawChar) charState.kind = 'stick';
+  if(charState.kind === 'draw' && !drawnImage) charState.kind = 'stick';
+  const built = charState.kind === 'upload' ? buildRiggedCharacter(rawChar.clone(true), charState.up, charState.yaw, true)
+              : charState.kind === 'draw' ? buildDrawnCharacter(drawnImage)
+              : buildStickman(stickCfg);
   charTemplate = built.root; charState.info = built.info;
   refreshPreviewModel();
   if(typeof P !== 'undefined' && P && P.modelHolder) attachPlayerModel();
   return built.info;
 }
 function rigSummary(info){
-  if(!info) return '';
+  if(!info || info.stick || info.drawn) return '';
   const bits = [];
   if(info.arms) bits.push(`手 ×${info.arms}`);
   if(info.legs) bits.push(`腳 ×${info.legs}`);
@@ -361,7 +364,7 @@ async function idbGet(k){ try{ const db = await idb(); return await new Promise(
 async function idbDel(k){ try{ const db = await idb(); db.transaction('kv','readwrite').objectStore('kv').delete(k); }catch(e){} }
 
 function setStatus(msg, err=false){ const s = $('charStatus'); s.textContent = msg; s.classList.toggle('err', err); }
-function setTag(){ $('charTag').textContent = rawChar ? '我的角色' : '預設'; }
+function setTag(){ $('charTag').textContent = { stick:'火柴人', draw:'我畫的', upload:'3D 模型' }[charState.kind] || '火柴人'; }
 
 async function useFiles(fileList){
   try{
@@ -372,8 +375,8 @@ async function useFiles(fileList){
     prepareMaterials(parsed.obj);
     rawChar = parsed.obj;
     Object.assign(charState, { files, up:parsed.defaultUp, yaw:0, name:parsed.name, kind:'upload' });
-    const info = rebuildTemplate(); setTag();
-    await idbSet('char', { files, up:charState.up, yaw:charState.yaw, name:charState.name });
+    const info = rebuildTemplate(); setTag(); setCharTab('upload', false);
+    await idbSet('char', { files, up:charState.up, yaw:charState.yaw, name:charState.name }); await idbSet('charKind', 'upload');
     setStatus(`✔ 已換成「${parsed.name}」，下次打開還在。${rigSummary(info)}`);
     previewAct('wave'); sfx.ability();
   }catch(e){
@@ -388,11 +391,19 @@ async function restoreCharacter(){
       const parsed = await parseCharacter(saved.files);
       prepareMaterials(parsed.obj);
       rawChar = parsed.obj;
-      Object.assign(charState, { files:saved.files, up:saved.up || parsed.defaultUp, yaw:saved.yaw || 0, name:saved.name || parsed.name, kind:'upload' });
+      Object.assign(charState, { files:saved.files, up:saved.up || parsed.defaultUp, yaw:saved.yaw || 0, name:saved.name || parsed.name });
     }catch(e){ rawChar = null; }
   }
-  const info = rebuildTemplate(); setTag();
-  setStatus(rawChar ? `目前角色：「${charState.name}」。${rigSummary(info)}` : '用預設角色。上傳你在 Tinkercad 做的角色，它會跟著動起來！');
+  // v2.9 火柴人設定、手繪圖、上次用哪一種
+  const sc = await idbGet('stick'); if(sc) stickCfg = { ...STICK_DEFAULT, ...sc };
+  const dr = await idbGet('drawn');
+  if(dr){ try{ const im = new Image(); im.src = dr; await im.decode(); const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; c.getContext('2d').drawImage(im, 0, 0); drawnImage = c; }catch(e){} }
+  const raw = await idbGet('drawRaw');
+  if(raw && dp){ try{ const im = new Image(); im.src = raw; await im.decode(); dp.drawImage(im, 0, 0); strokeCount = 1; }catch(e){} }
+  let kind = await idbGet('charKind'); if(!kind) kind = rawChar ? 'upload' : 'stick';
+  charState.kind = kind;
+  const info = rebuildTemplate(); setTag(); syncStickPanel(); setCharTab(charState.kind, false);
+  setStatus(charState.kind === 'upload' ? `目前角色：「${charState.name}」。${rigSummary(info)}` : charState.kind === 'draw' ? '目前用你畫的角色。想改就按「繼續畫」。' : '捏一個自己的火柴人吧！選頭型、表情、配件和顏色。');
 }
 function saveCharSettings(){ if(rawChar) idbSet('char', { files:charState.files, up:charState.up, yaw:charState.yaw, name:charState.name }); }
 

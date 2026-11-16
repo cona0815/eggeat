@@ -188,9 +188,9 @@ fileIn.onchange = () => { if(fileIn.files.length) useFiles([...fileIn.files]); f
 ['dragenter','dragover'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('over'); }));
 ['dragleave','drop'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('over'); }));
 dropZone.addEventListener('drop', e => { const f = [...(e.dataTransfer?.files || [])]; if(f.length) useFiles(f); });
-$('btnYaw').onclick = () => { if(!rawChar){ setStatus('預設角色已經朝正面了，上傳自己的角色後才需要轉向。'); return; } charState.yaw = (charState.yaw + 1) % 4; const info = rebuildTemplate(); saveCharSettings(); setStatus('已轉 90°。正面朝向你就對了。' + rigSummary(info)); };
-$('btnUp').onclick = () => { if(!rawChar){ setStatus('上傳自己的角色後才需要扶正。'); return; } const order = ['z','y','x']; charState.up = order[(order.indexOf(charState.up) + 1) % 3]; const info = rebuildTemplate(); saveCharSettings(); setStatus('已換一個直立方向，直到角色站好為止。' + rigSummary(info)); };
-$('btnDefault').onclick = async () => { rawChar = null; charState.files = null; await idbDel('char'); rebuildTemplate(); setTag(); setStatus('已換回預設角色。'); };
+$('btnYaw').onclick = () => { if(charState.kind !== 'upload'){ setStatus('預設角色已經朝正面了，上傳自己的角色後才需要轉向。'); return; } charState.yaw = (charState.yaw + 1) % 4; const info = rebuildTemplate(); saveCharSettings(); setStatus('已轉 90°。正面朝向你就對了。' + rigSummary(info)); };
+$('btnUp').onclick = () => { if(charState.kind !== 'upload'){ setStatus('上傳自己的角色後才需要扶正。'); return; } const order = ['z','y','x']; charState.up = order[(order.indexOf(charState.up) + 1) % 3]; const info = rebuildTemplate(); saveCharSettings(); setStatus('已換一個直立方向，直到角色站好為止。' + rigSummary(info)); };
+initCharUI();
 const startTitleMusic = () => { if(state === 'title' && !Music.current) Music.play('title'); };
 document.addEventListener('pointerdown', startTitleMusic); document.addEventListener('keydown', startTitleMusic);
 

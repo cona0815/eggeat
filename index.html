@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <!--
-  美食冒險家  v2.8  ·  2026-11-02
+  美食冒險家  v2.9  ·  2026-11-16
+  v2.9 預設角色改成自己捏的火柴人（頭型、表情、配件、顏色、粗細）或自己畫的角色；上傳 Tinkercad 3D 模型改成進階選項
   v2.8 大招能量累積變慢（約要 2.5～3 倍）
   v2.7 取消吸入，改成踩敵人（翻倒後會起身）再踢飛；踢飛會掉能力星星；新增黑洞、冰晶風暴、星星機關槍；大招能量條＋全畫面大招（L）
   v2.6 新增 5 種超級武器（雷神鎚、火箭筒、流星雨、龍捲風、彩虹光砲）；魔王戰開打送武器、天上常掉武器；傷害數字、閃光、爆炸光環等特效升級；碰到能力星星就能拿
@@ -13,7 +14,7 @@
   v2.2 打魔王時會不定時從天上掉小吃（體力低時多掉補血小吃）
   v2.1 走路更順（腳不再陷進地面）、改成兩段跳（棉花糖可一直飄）、被打到能力會消失、新增 5 種武器與 4 種新敵人
   橫向捲軸「踩踏／踢飛／撿武器」3D 動作過關遊戲（Three.js）
-  ・上傳自己做的角色（Tinkercad .zip / .obj+.mtl / .glb / .stl），會自動辨識手、腳、頭頂配件並做出動作
+  ・角色：捏火柴人／自己畫；進階可上傳 Tinkercad 3D 模型（.zip / .obj+.mtl / .glb / .stl），會自動辨識手、腳、頭頂配件並做出動作
   ・5 個台南主題關卡＋2 隻中魔王＋最終魔王雷雲王
   ・18 種台南小吃（13 種特別能力＋5 種補給）＋11 種敵人複製能力＋8 種超級武器，附小吃圖鑑
   ・配樂：music/ 資料夾內的 mp3；找不到時自動改用內建合成配樂
@@ -248,6 +249,26 @@ h1,h2,h3{text-wrap:balance}
 @keyframes ultTxt{0%{transform:scale(.2) rotate(-12deg)}30%{transform:scale(1.15) rotate(3deg)}50%{transform:scale(1)}100%{transform:scale(1.25);opacity:.0}}
 .tb[data-k="ult"]{background:linear-gradient(135deg,#ffcf3f,#ff5ad8);color:#fff;-webkit-text-stroke:2px #1f2a5a;paint-order:stroke fill}
 
+/* v2.9 角色分頁：捏火柴人／自己畫／上傳 3D */
+.ctabs{display:flex;gap:6px}
+.ctabs button{flex:1;cursor:pointer;border:3px solid var(--ink);background:var(--panel-2);border-radius:12px;padding:6px 4px;font:900 14px/1.2 inherit;color:var(--text);box-shadow:0 3px 0 var(--ink)}
+.ctabs button small{display:block;font-size:10px;opacity:.7}
+.ctabs button.on{background:var(--sun);color:#1f2a5a;transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.cpanel{display:flex;flex-direction:column;gap:6px}
+.cpanel[hidden],#drawTools[hidden],#drawDone[hidden],#drawStage[hidden]{display:none}
+.srow{display:flex;align-items:center;gap:8px}
+.srow .lab{flex:0 0 52px;font-size:13px;font-weight:900;color:var(--muted)}
+.opts{display:flex;flex-wrap:wrap;gap:5px}
+.opts .chip{padding:3px 10px;font-size:12px}
+.sw{width:22px;height:22px;border-radius:50%;border:2px solid var(--ink);cursor:pointer;padding:0}
+.sw.on{box-shadow:0 0 0 3px var(--sun),0 0 0 5px var(--ink)}
+#drawStage{position:absolute;inset:6px;display:flex;align-items:center;justify-content:center}
+#drawStage canvas{position:absolute;height:100%;width:auto;aspect-ratio:260/300;background:transparent;touch-action:none}
+#drawCanvas{cursor:crosshair;background:rgba(255,255,255,.65)!important;border-radius:10px}
+#drawTools{display:flex;flex-direction:column;gap:6px}
+#btnDrawUse{align-self:center}
+@media (max-height:500px){ .srow .lab{flex-basis:44px;font-size:11px} .ctabs button{font-size:12px;padding:3px} .sw{width:18px;height:18px} }
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script type="importmap">
@@ -305,7 +326,7 @@ h1,h2,h3{text-wrap:balance}
   <div class="title-wrap">
     <div class="title-left">
       <h1 class="logo"><span class="s">大橋</span><span class="b"><span>美</span><span>食</span><span>冒</span><span>險</span><span>家</span></span></h1>
-      <span class="ver num">v2.8 · 2026-11-02</span>
+      <span class="ver num">v2.9 · 2026-11-16</span>
       <nav class="menu">
         <button class="btn go" id="btnPlay">開始冒險</button>
         <button class="btn" id="btnDex">🍜 小吃圖鑑 <small id="dexCount" class="num"></small></button>
@@ -314,8 +335,15 @@ h1,h2,h3{text-wrap:balance}
       </nav>
     </div>
     <div class="card charcard">
-      <h2>我的角色 <span class="tag" id="charTag">預設</span></h2>
-      <div id="previewBox"><canvas id="preview" width="360" height="360"></canvas><span class="hint" id="pvHint">待機</span></div>
+      <h2>我的角色 <span class="tag" id="charTag">火柴人</span></h2>
+      <div class="ctabs" id="charTabs">
+        <button data-ct="stick" class="on">🧩 捏火柴人</button>
+        <button data-ct="draw">✏️ 自己畫</button>
+        <button data-ct="upload">⬆ 上傳 3D<small>進階</small></button>
+      </div>
+      <div id="previewBox"><canvas id="preview" width="360" height="360"></canvas><span class="hint" id="pvHint">待機</span>
+        <div id="drawStage" hidden><canvas id="guideCanvas" width="260" height="300"></canvas><canvas id="drawCanvas" width="260" height="300"></canvas></div>
+      </div>
       <div class="row acts" id="actRow">
         <button class="chip" data-act="walk">走路</button>
         <button class="chip" data-act="jump">跳躍</button>
@@ -324,17 +352,30 @@ h1,h2,h3{text-wrap:balance}
         <button class="chip" data-act="wave">揮手</button>
         <button class="chip" data-act="dance">跳舞</button>
       </div>
-      <label class="drop" id="dropZone">
-        ⬆ 上傳我的角色
-        <small>Tinkercad 匯出 .OBJ 下載的 zip 直接丟進來（也可 .obj+.mtl／.glb／.stl）</small>
-        <input type="file" id="fileIn" multiple accept=".zip,.obj,.mtl,.glb,.gltf,.bin,.stl,.png,.jpg,.jpeg" hidden>
-      </label>
-      <div class="row">
-        <button class="btn sm" id="btnYaw">↻ 轉向</button>
-        <button class="btn sm" id="btnUp">⤒ 扶正</button>
-        <button class="btn sm" id="btnDefault">用預設角色</button>
+      <div class="cpanel" id="cpStick"></div>
+      <div class="cpanel" id="cpDraw" hidden>
+        <div id="drawTools" hidden>
+          <div class="opts" id="penColors"></div>
+          <div class="row">
+            <button class="chip" data-size="4">細筆</button><button class="chip on" data-size="8">中筆</button><button class="chip" data-size="15">粗筆</button>
+            <button class="chip" id="btnEraser">橡皮擦</button><button class="chip" id="btnUndo">↩ 復原</button><button class="chip" id="btnClear">🗑 清除</button><button class="chip on" id="btnGuide">👁 範例線</button>
+          </div>
+          <button class="btn go sm" id="btnDrawUse">✔ 用這張畫</button>
+        </div>
+        <div id="drawDone" class="row"><button class="btn sm" id="btnDrawEdit">✏️ 繼續畫</button></div>
       </div>
-      <div id="charStatus">正面要朝向你；不是的話按「轉向」。</div>
+      <div class="cpanel" id="cpUpload" hidden>
+        <label class="drop" id="dropZone">
+          ⬆ 上傳我的 3D 角色
+          <small>Tinkercad 匯出 .OBJ 下載的 zip 直接丟進來（也可 .obj+.mtl／.glb／.stl）</small>
+          <input type="file" id="fileIn" multiple accept=".zip,.obj,.mtl,.glb,.gltf,.bin,.stl,.png,.jpg,.jpeg" hidden>
+        </label>
+        <div class="row">
+          <button class="btn sm" id="btnYaw">↻ 轉向</button>
+          <button class="btn sm" id="btnUp">⤒ 扶正</button>
+        </div>
+      </div>
+      <div id="charStatus">捏一個自己的火柴人吧！</div>
     </div>
   </div>
 </section>
@@ -433,7 +474,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeVertices, mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
-const VERSION = 'v2.8', BUILD_DATE = '2026-11-02';
+const VERSION = 'v2.9', BUILD_DATE = '2026-11-16';
 
 /* =====================================================================
    小工具
@@ -971,7 +1012,7 @@ document.addEventListener('visibilitychange', () => { if(!actx) return; if(docum
    角色：上傳 → 解析 → 轉正縮放 → 自動拆零件 → 自動骨架 → 動作
    ===================================================================== */
 const CHAR_H = 1.55;                // 角色正規化後的高度
-const charState = { files:null, yaw:0, up:'z', name:'', kind:'default', info:null };
+const charState = { files:null, yaw:0, up:'z', name:'', kind:'stick', info:null };   // kind: stick 捏火柴人 / draw 自己畫 / upload 上傳 3D
 let charTemplate = null;            // 已綁好骨架的角色（遊戲與預覽都 clone 它）
 let rawChar = null;                 // 原始模型（未轉正）
 
@@ -1307,15 +1348,18 @@ async function parseCharacter(files){
 }
 
 function rebuildTemplate(){
-  const built = rawChar ? buildRiggedCharacter(rawChar.clone(true), charState.up, charState.yaw, true)
-                        : buildRiggedCharacter(makeDefaultCharacter(), 'y', 0, false);
+  if(charState.kind === 'upload' && !rawChar) charState.kind = 'stick';
+  if(charState.kind === 'draw' && !drawnImage) charState.kind = 'stick';
+  const built = charState.kind === 'upload' ? buildRiggedCharacter(rawChar.clone(true), charState.up, charState.yaw, true)
+              : charState.kind === 'draw' ? buildDrawnCharacter(drawnImage)
+              : buildStickman(stickCfg);
   charTemplate = built.root; charState.info = built.info;
   refreshPreviewModel();
   if(typeof P !== 'undefined' && P && P.modelHolder) attachPlayerModel();
   return built.info;
 }
 function rigSummary(info){
-  if(!info) return '';
+  if(!info || info.stick || info.drawn) return '';
   const bits = [];
   if(info.arms) bits.push(`手 ×${info.arms}`);
   if(info.legs) bits.push(`腳 ×${info.legs}`);
@@ -1330,7 +1374,7 @@ async function idbGet(k){ try{ const db = await idb(); return await new Promise(
 async function idbDel(k){ try{ const db = await idb(); db.transaction('kv','readwrite').objectStore('kv').delete(k); }catch(e){} }
 
 function setStatus(msg, err=false){ const s = $('charStatus'); s.textContent = msg; s.classList.toggle('err', err); }
-function setTag(){ $('charTag').textContent = rawChar ? '我的角色' : '預設'; }
+function setTag(){ $('charTag').textContent = { stick:'火柴人', draw:'我畫的', upload:'3D 模型' }[charState.kind] || '火柴人'; }
 
 async function useFiles(fileList){
   try{
@@ -1341,8 +1385,8 @@ async function useFiles(fileList){
     prepareMaterials(parsed.obj);
     rawChar = parsed.obj;
     Object.assign(charState, { files, up:parsed.defaultUp, yaw:0, name:parsed.name, kind:'upload' });
-    const info = rebuildTemplate(); setTag();
-    await idbSet('char', { files, up:charState.up, yaw:charState.yaw, name:charState.name });
+    const info = rebuildTemplate(); setTag(); setCharTab('upload', false);
+    await idbSet('char', { files, up:charState.up, yaw:charState.yaw, name:charState.name }); await idbSet('charKind', 'upload');
     setStatus(`✔ 已換成「${parsed.name}」，下次打開還在。${rigSummary(info)}`);
     previewAct('wave'); sfx.ability();
   }catch(e){
@@ -1357,11 +1401,19 @@ async function restoreCharacter(){
       const parsed = await parseCharacter(saved.files);
       prepareMaterials(parsed.obj);
       rawChar = parsed.obj;
-      Object.assign(charState, { files:saved.files, up:saved.up || parsed.defaultUp, yaw:saved.yaw || 0, name:saved.name || parsed.name, kind:'upload' });
+      Object.assign(charState, { files:saved.files, up:saved.up || parsed.defaultUp, yaw:saved.yaw || 0, name:saved.name || parsed.name });
     }catch(e){ rawChar = null; }
   }
-  const info = rebuildTemplate(); setTag();
-  setStatus(rawChar ? `目前角色：「${charState.name}」。${rigSummary(info)}` : '用預設角色。上傳你在 Tinkercad 做的角色，它會跟著動起來！');
+  // v2.9 火柴人設定、手繪圖、上次用哪一種
+  const sc = await idbGet('stick'); if(sc) stickCfg = { ...STICK_DEFAULT, ...sc };
+  const dr = await idbGet('drawn');
+  if(dr){ try{ const im = new Image(); im.src = dr; await im.decode(); const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; c.getContext('2d').drawImage(im, 0, 0); drawnImage = c; }catch(e){} }
+  const raw = await idbGet('drawRaw');
+  if(raw && dp){ try{ const im = new Image(); im.src = raw; await im.decode(); dp.drawImage(im, 0, 0); strokeCount = 1; }catch(e){} }
+  let kind = await idbGet('charKind'); if(!kind) kind = rawChar ? 'upload' : 'stick';
+  charState.kind = kind;
+  const info = rebuildTemplate(); setTag(); syncStickPanel(); setCharTab(charState.kind, false);
+  setStatus(charState.kind === 'upload' ? `目前角色：「${charState.name}」。${rigSummary(info)}` : charState.kind === 'draw' ? '目前用你畫的角色。想改就按「繼續畫」。' : '捏一個自己的火柴人吧！選頭型、表情、配件和顏色。');
 }
 function saveCharSettings(){ if(rawChar) idbSet('char', { files:charState.files, up:charState.up, yaw:charState.yaw, name:charState.name }); }
 
@@ -1406,6 +1458,211 @@ function renderPreview(dt){
   const s = damp(pvAnim.scale.x, sc, 10, dt); pvAnim.scale.set(s, s*(mode === 'idle' ? 1 + Math.sin(pvT*3)*.02 : 1), s);
   animateRig(pvModel, { mode, t:pvT, phase:pvT*12, k }, dt);
   pvRenderer.render(pvScene, pvCam);
+}
+
+/* ───── 03b_stickman.js ───── */
+/* =====================================================================
+   v2.9 火柴人角色（預設）：捏造型＋自己畫；上傳 3D 模型改成進階選項
+   ===================================================================== */
+const STICK_COLORS = ['#3a3a3a','#ff5a5a','#ff9a3d','#ffcf3f','#47b04b','#4f8cff','#a86aff','#ff7ec7','#8a5a32','#ffffff'];
+const STICK_DEFAULT = { headShape:'circle', face:'smile', accessory:'none', headColor:'#ffffff', bodyColor:'#3a3a3a', thickness:'mid' };
+let stickCfg = { ...STICK_DEFAULT };
+let drawnImage = null;           // 自己畫的圖（canvas），用在「自己畫」角色
+const hexNum = c => parseInt(c.slice(1), 16);
+
+/* 臉：畫在透明貼圖上，貼在頭的正面 */
+function faceTexture(face){
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  g.strokeStyle = g.fillStyle = '#1f2433'; g.lineWidth = 9; g.lineCap = 'round'; g.lineJoin = 'round';
+  if(face === 'cool'){
+    g.fillRect(22, 46, 36, 18); g.fillRect(70, 46, 36, 18); g.fillRect(52, 50, 24, 6);
+    g.beginPath(); g.moveTo(46, 92); g.lineTo(84, 88); g.stroke();
+  } else if(face === 'angry'){
+    for(const [x, d] of [[40, 1], [88, -1]]){ g.beginPath(); g.arc(x, 60, 8, 0, Math.PI*2); g.fill(); g.beginPath(); g.moveTo(x - 16*d, 36); g.lineTo(x + 12*d, 46); g.stroke(); }
+    g.beginPath(); g.arc(64, 104, 18, Math.PI*1.15, Math.PI*1.85); g.stroke();
+  } else if(face === 'dot'){
+    for(const x of [42, 86]){ g.beginPath(); g.arc(x, 58, 8, 0, Math.PI*2); g.fill(); }
+    g.beginPath(); g.moveTo(50, 92); g.lineTo(78, 92); g.stroke();
+  } else {  // smile
+    for(const x of [42, 86]){ g.beginPath(); g.arc(x, 56, 10, 0, Math.PI*2); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(x + 3, 52, 3.5, 0, Math.PI*2); g.fill(); g.fillStyle = '#1f2433'; }
+    g.beginPath(); g.arc(64, 74, 24, Math.PI*.18, Math.PI*.82); g.stroke();
+    g.fillStyle = 'rgba(255,120,140,.55)'; for(const x of [24, 104]){ g.beginPath(); g.ellipse(x, 82, 11, 7, 0, 0, Math.PI*2); g.fill(); }
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
+/* 捏出來的 3D 火柴人：直接做好骨架（跟上傳角色用同一套動作） */
+function buildStickman(cfg){
+  const root = new THREE.Group(), rig = new THREE.Group(); rig.name = 'rig'; root.add(rig);
+  const lineR = { thin:.032, mid:.05, thick:.072 }[cfg.thickness] || .05;
+  const bodyM = toon(hexNum(cfg.bodyColor)), headM = toon(hexNum(cfg.headColor));
+  const hipY = .56, shoulderY = .98, headR = .25, headY = shoulderY + .06 + headR;
+  const limb = (len, r) => { const g = new THREE.Group(); const m = mesh(G.cyl, bodyM, r, len, r, 0, -len/2, 0); g.add(m); g.add(mesh(G.sphere, bodyM, r*1.7, r*1.7, r*1.7, 0, -len, 0)); return g; };
+
+  // 身體（以屁股為中心）
+  const body = new THREE.Group(); body.userData.rigRole = 'body'; body.position.set(0, hipY, 0); rig.add(body);
+  body.add(mesh(G.cyl, bodyM, lineR, shoulderY - hipY + .02, lineR, 0, (shoulderY - hipY)/2, 0));
+  body.add(mesh(G.sphere, bodyM, lineR*1.4, lineR*1.4, lineR*1.4, 0, 0, 0));
+  body.add(mesh(G.cyl, bodyM, lineR*.9, .1, lineR*.9, 0, shoulderY - hipY + .05, 0));   // 脖子
+  // 頭
+  const hy = headY - hipY; let head, faceZ;
+  if(cfg.headShape === 'square'){ head = mesh(G.rbox, headM, headR*1.8, headR*1.8, headR*1.6, 0, hy, 0); faceZ = headR*.8 + .005; }
+  else if(cfg.headShape === 'triangle'){ head = mesh(G.cone, headM, headR*1.15, headR*2.1, headR*1.15, 0, hy, 0); faceZ = headR*.62; }
+  else { head = mesh(G.sphere, headM, headR, headR, headR*.95, 0, hy, 0); faceZ = headR*.93; }
+  body.add(head);
+  const faceMat = new THREE.MeshBasicMaterial({ map:faceTexture(cfg.face), transparent:true, depthWrite:false });
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(headR*1.5, headR*1.5), faceMat); face.position.set(0, hy - (cfg.headShape === 'triangle' ? headR*.25 : 0), faceZ + .012);
+  face.userData.noOutline = true; body.add(face);
+  // 頭上配件（跟著頭一起晃）
+  const top = new THREE.Group(); top.userData.rigRole = 'top'; top.position.set(0, hy + headR*.85, 0); body.add(top);
+  const topY = cfg.headShape === 'triangle' ? headR*.25 : 0;
+  if(cfg.accessory === 'hat'){ top.add(mesh(G.cyl, toon(0x3a7ad9), .2, .05, .2, 0, topY + .02, .02)); top.add(mesh(G.sphere, toon(0x3a7ad9), .19, .14, .19, 0, topY + .06, 0)); top.add(mesh(G.box, toon(0x3a7ad9), .2, .025, .16, 0, topY + .03, .2)); }
+  else if(cfg.accessory === 'crown'){ const gold = toon(0xffcf3f, { emissive:0x553300 }); top.add(mesh(G.cyl, gold, .17, .1, .17, 0, topY + .06, 0)); for(let i=0;i<5;i++){ const a = i/5*Math.PI*2; top.add(mesh(G.cone, gold, .05, .12, .05, Math.cos(a)*.15, topY + .16, Math.sin(a)*.15)); } }
+  else if(cfg.accessory === 'antenna'){ top.add(mesh(G.cyl, bodyM, .015, .24, .015, 0, topY + .1, 0)); top.add(mesh(G.sphere, toon(0xff5a5a, { emissive:0x551111 }), .055, .055, .055, 0, topY + .24, 0)); }
+  else if(cfg.accessory === 'bow'){ const pink = toon(0xff7ec7); for(const s of [-1,1]){ const w = mesh(G.cone, pink, .07, .14, .05, s*.09, topY + .02, 0); w.rotation.z = s*Math.PI/2; top.add(w); } top.add(mesh(G.sphere, pink, .045, .045, .045, 0, topY + .02, 0)); }
+  // 手（掛在身體上）
+  for(const side of [-1, 1]){
+    const arm = new THREE.Group(); arm.userData.rigRole = 'arm'; arm.userData.rigSide = side; arm.userData.weight = side > 0 ? 1 : .9;
+    arm.position.set(side*lineR*1.2, shoulderY - hipY - .02, 0); body.add(arm);
+    const a = limb(.44, lineR); a.rotation.z = side*.42; arm.add(a);
+    if(side > 0) arm.userData.weapon = true;
+  }
+  // 腳
+  for(const side of [-1, 1]){
+    const leg = new THREE.Group(); leg.userData.rigRole = 'leg'; leg.userData.rigSide = side; leg.userData.halfZ = lineR*1.7; leg.userData.legH = hipY;
+    leg.position.set(side*.03, hipY, 0); rig.add(leg);
+    const l = limb(hipY - lineR*1.6, lineR); l.rotation.z = side*.2; leg.add(l);
+  }
+  // 帽子掛點（吃到能力時的帽子）
+  const hat = new THREE.Group(); hat.userData.rigRole = 'hat'; hat.position.set(0, topY + .02, 0); hat.scale.setScalar(.85); top.add(hat);
+  root.traverse(o => { if(o.isMesh) o.castShadow = true; });
+  addOutline(root, 0.0001, outlineMat);
+  root.userData.mouthY = hy + hipY - .05; root.userData.charHeight = headY + headR;
+  return { root, info:{ arms:2, legs:2, tops:cfg.accessory === 'none' ? 0 : 1, parts:10, stick:true } };
+}
+
+/* 自己畫的角色：把畫變成紙片人，整個身體一起動 */
+function buildDrawnCharacter(img){
+  const root = new THREE.Group(), rig = new THREE.Group(); rig.name = 'rig'; root.add(rig);
+  const body = new THREE.Group(); body.userData.rigRole = 'body'; rig.add(body);
+  const H = CHAR_H, W = H*img.width/img.height;
+  const tex = new THREE.CanvasTexture(img); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  const front = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map:tex, transparent:true, alphaTest:.25, side:THREE.DoubleSide }));
+  front.position.set(0, H/2, 0); body.add(front);
+  // 白色紙邊（稍微大一點、放在後面）讓畫在場景裡看得清楚
+  const edge = document.createElement('canvas'); edge.width = img.width + 16; edge.height = img.height + 16; const eg = edge.getContext('2d');
+  for(let a=0;a<16;a++){ const r = 7; eg.drawImage(img, 8 + Math.cos(a/16*Math.PI*2)*r, 8 + Math.sin(a/16*Math.PI*2)*r); }
+  eg.globalCompositeOperation = 'source-in'; eg.fillStyle = '#ffffff'; eg.fillRect(0, 0, edge.width, edge.height);
+  const et = new THREE.CanvasTexture(edge); et.colorSpace = THREE.SRGBColorSpace;
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(W*edge.width/img.width, H*edge.height/img.height), new THREE.MeshBasicMaterial({ map:et, transparent:true, alphaTest:.25, side:THREE.DoubleSide }));
+  back.position.set(0, H/2, -.02); body.add(back);
+  const top = new THREE.Group(); top.userData.rigRole = 'top'; top.position.set(0, H*.92, 0); body.add(top);
+  const hat = new THREE.Group(); hat.userData.rigRole = 'hat'; hat.position.set(0, H*.04, 0); top.add(hat);
+  root.userData.mouthY = H*.75; root.userData.charHeight = H;
+  return { root, info:{ arms:0, legs:0, tops:0, parts:1, drawn:true } };
+}
+
+/* ── 標題畫面：捏造型選項 ── */
+const STICK_OPTS = [
+  ['headShape', '頭型', [['circle','圓頭'],['square','方頭'],['triangle','三角頭']]],
+  ['face', '表情', [['smile','微笑'],['cool','酷酷'],['dot','普通'],['angry','生氣']]],
+  ['accessory', '配件', [['none','無'],['hat','帽子'],['crown','皇冠'],['antenna','天線'],['bow','蝴蝶結']]],
+  ['thickness', '粗細', [['thin','細'],['mid','中'],['thick','粗']]],
+  ['headColor', '頭顏色', 'color'],
+  ['bodyColor', '身體色', 'color'],
+];
+function buildStickPanel(){
+  const box = $('cpStick'); box.innerHTML = '';
+  for(const [key, label, opts] of STICK_OPTS){
+    const row = document.createElement('div'); row.className = 'srow'; row.innerHTML = `<span class="lab">${label}</span>`;
+    const wrap = document.createElement('div'); wrap.className = 'opts';
+    if(opts === 'color') STICK_COLORS.forEach(c => { const b = document.createElement('button'); b.className = 'sw'; b.style.background = c; b.dataset.v = c; b.title = c; wrap.appendChild(b); });
+    else opts.forEach(([v, t]) => { const b = document.createElement('button'); b.className = 'chip'; b.dataset.v = v; b.textContent = t; wrap.appendChild(b); });
+    wrap.querySelectorAll('button').forEach(b => b.onclick = () => { stickCfg[key] = b.dataset.v; syncStickPanel(); useStick(); sfx.select(); });
+    row.appendChild(wrap); box.appendChild(row);
+  }
+  const r = document.createElement('div'); r.className = 'row'; r.innerHTML = '<button class="btn sm" id="btnStickRandom">🎲 隨機</button><button class="btn sm" id="btnStickReset">↺ 重設</button>'; box.appendChild(r);
+  $('btnStickRandom').onclick = () => { for(const [key, , opts] of STICK_OPTS) stickCfg[key] = opts === 'color' ? pick(STICK_COLORS) : pick(opts)[0]; if(stickCfg.headColor === stickCfg.bodyColor) stickCfg.headColor = '#ffffff'; syncStickPanel(); useStick(); previewAct('dance'); sfx.select(); };
+  $('btnStickReset').onclick = () => { stickCfg = { ...STICK_DEFAULT }; syncStickPanel(); useStick(); sfx.select(); };
+  syncStickPanel();
+}
+function syncStickPanel(){
+  $('cpStick').querySelectorAll('.srow').forEach((row, i) => { const key = STICK_OPTS[i][0]; row.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === stickCfg[key])); });
+}
+function useStick(){
+  charState.kind = 'stick'; rebuildTemplate(); setTag(); idbSet('stick', { ...stickCfg }); idbSet('charKind', 'stick');
+  setStatus('火柴人已更新！按「走路」「跳舞」看看它怎麼動。');
+}
+
+/* ── 自己畫：手繪畫布 ── */
+const DRAW_W = 260, DRAW_H = 300;
+let dpCanvas, dp, penColor = '#3a3a3a', penSize = 8, erasing = false, isDrawing = false, lastP = null, strokeCount = 0, undoStack = [];
+function initDrawPad(){
+  dpCanvas = $('drawCanvas'); dp = dpCanvas.getContext('2d');
+  const gc = $('guideCanvas').getContext('2d'); gc.clearRect(0, 0, DRAW_W, DRAW_H);
+  gc.strokeStyle = '#c9d6e6'; gc.lineWidth = 4; gc.lineCap = 'round'; gc.setLineDash([8, 8]);
+  const cx = DRAW_W/2;
+  gc.beginPath(); gc.arc(cx, 64, 32, 0, Math.PI*2); gc.stroke();
+  gc.beginPath(); gc.moveTo(cx, 96); gc.lineTo(cx, 196); gc.stroke();
+  gc.beginPath(); gc.moveTo(cx, 124); gc.lineTo(cx - 40, 162); gc.moveTo(cx, 124); gc.lineTo(cx + 40, 162); gc.stroke();
+  gc.beginPath(); gc.moveTo(cx, 196); gc.lineTo(cx - 32, 268); gc.moveTo(cx, 196); gc.lineTo(cx + 32, 268); gc.stroke();
+  gc.setLineDash([]);
+  const pos = e => { const r = dpCanvas.getBoundingClientRect(); const t = e.touches && e.touches[0] ? e.touches[0] : e; return { x:(t.clientX - r.left)*DRAW_W/r.width, y:(t.clientY - r.top)*DRAW_H/r.height }; };
+  const style = () => { dp.globalCompositeOperation = erasing ? 'destination-out' : 'source-over'; dp.strokeStyle = dp.fillStyle = penColor; dp.lineWidth = penSize; dp.lineCap = 'round'; dp.lineJoin = 'round'; };
+  const start = e => { e.preventDefault(); try{ undoStack.push(dp.getImageData(0, 0, DRAW_W, DRAW_H)); if(undoStack.length > 20) undoStack.shift(); }catch(_){}
+    isDrawing = true; strokeCount++; lastP = pos(e); style(); dp.beginPath(); dp.arc(lastP.x, lastP.y, penSize/2, 0, Math.PI*2); dp.fill(); };
+  const move = e => { if(!isDrawing) return; e.preventDefault(); const p = pos(e); style(); dp.beginPath(); dp.moveTo(lastP.x, lastP.y); dp.lineTo(p.x, p.y); dp.stroke(); lastP = p; };
+  const end = () => { isDrawing = false; };
+  dpCanvas.addEventListener('pointerdown', e => { dpCanvas.setPointerCapture(e.pointerId); start(e); });
+  dpCanvas.addEventListener('pointermove', move); dpCanvas.addEventListener('pointerup', end); dpCanvas.addEventListener('pointercancel', end);
+  const pc = $('penColors'); STICK_COLORS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'sw' + (i === 0 ? ' on' : ''); b.style.background = c; b.dataset.c = c;
+    b.onclick = () => { penColor = c; erasing = false; $('btnEraser').classList.remove('on'); pc.querySelectorAll('.sw').forEach(s => s.classList.toggle('on', s === b)); }; pc.appendChild(b); });
+  document.querySelectorAll('#cpDraw [data-size]').forEach(b => b.onclick = () => { penSize = +b.dataset.size; erasing = false; $('btnEraser').classList.remove('on'); document.querySelectorAll('#cpDraw [data-size]').forEach(x => x.classList.toggle('on', x === b)); });
+  $('btnEraser').onclick = () => { erasing = !erasing; $('btnEraser').classList.toggle('on', erasing); };
+  $('btnUndo').onclick = () => { if(undoStack.length) dp.putImageData(undoStack.pop(), 0, 0); };
+  $('btnClear').onclick = () => { try{ undoStack.push(dp.getImageData(0, 0, DRAW_W, DRAW_H)); }catch(_){} dp.clearRect(0, 0, DRAW_W, DRAW_H); strokeCount = 0; };
+  $('btnGuide').onclick = () => { const g = $('guideCanvas'); const show = g.style.display === 'none'; g.style.display = show ? '' : 'none'; $('btnGuide').classList.toggle('on', show); };
+  $('btnDrawEdit').onclick = () => setDrawEditing(true);
+  $('btnDrawUse').onclick = () => {
+    const img = snapshotDrawing();
+    if(!img){ setStatus('先畫一個角色再按「用這張畫」喔！', true); sfx.deny(); return; }
+    drawnImage = img; charState.kind = 'draw'; rebuildTemplate(); setTag(); setDrawEditing(false);
+    try{ idbSet('drawn', img.toDataURL('image/png')); idbSet('drawRaw', dpCanvas.toDataURL('image/png')); idbSet('charKind', 'draw'); }catch(_){}
+    setStatus('✔ 你畫的角色上場了！它會跟著走路、跳躍。想改就按「繼續畫」。'); previewAct('dance'); sfx.ability();
+  };
+}
+function snapshotDrawing(){
+  const d = dp.getImageData(0, 0, DRAW_W, DRAW_H).data; let x0 = DRAW_W, y0 = DRAW_H, x1 = -1, y1 = -1;
+  for(let y=0;y<DRAW_H;y++) for(let x=0;x<DRAW_W;x++) if(d[(y*DRAW_W + x)*4 + 3] > 20){ if(x < x0) x0 = x; if(x > x1) x1 = x; if(y < y0) y0 = y; if(y > y1) y1 = y; }
+  if(x1 < 0) return null;
+  const pad = 6; x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(DRAW_W - 1, x1 + pad); y1 = Math.min(DRAW_H - 1, y1 + pad);
+  const c = document.createElement('canvas'); c.width = (x1 - x0 + 1)*2; c.height = (y1 - y0 + 1)*2;
+  const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(dpCanvas, x0, y0, x1 - x0 + 1, y1 - y0 + 1, 0, 0, c.width, c.height);
+  return c;
+}
+function setDrawEditing(on){
+  $('drawStage').hidden = !on; $('preview').style.visibility = on ? 'hidden' : ''; $('pvHint').hidden = on;
+  $('drawTools').hidden = !on; $('drawDone').hidden = on; $('actRow').style.visibility = on ? 'hidden' : '';
+}
+
+/* ── 分頁：捏火柴人／自己畫／上傳 3D（進階） ── */
+function setCharTab(t, apply = true){
+  document.querySelectorAll('#charTabs [data-ct]').forEach(b => b.classList.toggle('on', b.dataset.ct === t));
+  $('cpStick').hidden = t !== 'stick'; $('cpDraw').hidden = t !== 'draw'; $('cpUpload').hidden = t !== 'upload';
+  if(t !== 'draw') setDrawEditing(false);
+  if(!apply) return;
+  if(t === 'stick'){ useStick(); }
+  else if(t === 'draw'){
+    if(drawnImage){ charState.kind = 'draw'; rebuildTemplate(); setTag(); idbSet('charKind', 'draw'); setDrawEditing(false); setStatus('目前用你畫的角色。想改就按「繼續畫」。'); }
+    else { setDrawEditing(true); setStatus('照著淡淡的範例線畫一個火柴人（或任何角色），畫好按「✔ 用這張畫」。'); }
+  } else {
+    if(rawChar){ charState.kind = 'upload'; rebuildTemplate(); setTag(); idbSet('charKind', 'upload'); setStatus(`目前角色：「${charState.name}」。${rigSummary(charState.info)}`); }
+    else setStatus('進階：把 Tinkercad 匯出的 .OBJ zip 拖進黃色框，手腳分開做的零件會自動動起來。');
+  }
+}
+function initCharUI(){
+  buildStickPanel(); initDrawPad();
+  document.querySelectorAll('#charTabs [data-ct]').forEach(b => b.onclick = () => { setCharTab(b.dataset.ct); sfx.select(); });
 }
 
 /* ───── 04_data.js ───── */
@@ -4156,9 +4413,9 @@ fileIn.onchange = () => { if(fileIn.files.length) useFiles([...fileIn.files]); f
 ['dragenter','dragover'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('over'); }));
 ['dragleave','drop'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('over'); }));
 dropZone.addEventListener('drop', e => { const f = [...(e.dataTransfer?.files || [])]; if(f.length) useFiles(f); });
-$('btnYaw').onclick = () => { if(!rawChar){ setStatus('預設角色已經朝正面了，上傳自己的角色後才需要轉向。'); return; } charState.yaw = (charState.yaw + 1) % 4; const info = rebuildTemplate(); saveCharSettings(); setStatus('已轉 90°。正面朝向你就對了。' + rigSummary(info)); };
-$('btnUp').onclick = () => { if(!rawChar){ setStatus('上傳自己的角色後才需要扶正。'); return; } const order = ['z','y','x']; charState.up = order[(order.indexOf(charState.up) + 1) % 3]; const info = rebuildTemplate(); saveCharSettings(); setStatus('已換一個直立方向，直到角色站好為止。' + rigSummary(info)); };
-$('btnDefault').onclick = async () => { rawChar = null; charState.files = null; await idbDel('char'); rebuildTemplate(); setTag(); setStatus('已換回預設角色。'); };
+$('btnYaw').onclick = () => { if(charState.kind !== 'upload'){ setStatus('預設角色已經朝正面了，上傳自己的角色後才需要轉向。'); return; } charState.yaw = (charState.yaw + 1) % 4; const info = rebuildTemplate(); saveCharSettings(); setStatus('已轉 90°。正面朝向你就對了。' + rigSummary(info)); };
+$('btnUp').onclick = () => { if(charState.kind !== 'upload'){ setStatus('上傳自己的角色後才需要扶正。'); return; } const order = ['z','y','x']; charState.up = order[(order.indexOf(charState.up) + 1) % 3]; const info = rebuildTemplate(); saveCharSettings(); setStatus('已換一個直立方向，直到角色站好為止。' + rigSummary(info)); };
+initCharUI();
 const startTitleMusic = () => { if(state === 'title' && !Music.current) Music.play('title'); };
 document.addEventListener('pointerdown', startTitleMusic); document.addEventListener('keydown', startTitleMusic);
 

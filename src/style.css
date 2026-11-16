@@ -217,3 +217,23 @@ h1,h2,h3{text-wrap:balance}
 @keyframes ultIn{0%{opacity:0}10%{opacity:1}75%{opacity:1}100%{opacity:0}}
 @keyframes ultTxt{0%{transform:scale(.2) rotate(-12deg)}30%{transform:scale(1.15) rotate(3deg)}50%{transform:scale(1)}100%{transform:scale(1.25);opacity:.0}}
 .tb[data-k="ult"]{background:linear-gradient(135deg,#ffcf3f,#ff5ad8);color:#fff;-webkit-text-stroke:2px #1f2a5a;paint-order:stroke fill}
+
+/* v2.9 角色分頁：捏火柴人／自己畫／上傳 3D */
+.ctabs{display:flex;gap:6px}
+.ctabs button{flex:1;cursor:pointer;border:3px solid var(--ink);background:var(--panel-2);border-radius:12px;padding:6px 4px;font:900 14px/1.2 inherit;color:var(--text);box-shadow:0 3px 0 var(--ink)}
+.ctabs button small{display:block;font-size:10px;opacity:.7}
+.ctabs button.on{background:var(--sun);color:#1f2a5a;transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.cpanel{display:flex;flex-direction:column;gap:6px}
+.cpanel[hidden],#drawTools[hidden],#drawDone[hidden],#drawStage[hidden]{display:none}
+.srow{display:flex;align-items:center;gap:8px}
+.srow .lab{flex:0 0 52px;font-size:13px;font-weight:900;color:var(--muted)}
+.opts{display:flex;flex-wrap:wrap;gap:5px}
+.opts .chip{padding:3px 10px;font-size:12px}
+.sw{width:22px;height:22px;border-radius:50%;border:2px solid var(--ink);cursor:pointer;padding:0}
+.sw.on{box-shadow:0 0 0 3px var(--sun),0 0 0 5px var(--ink)}
+#drawStage{position:absolute;inset:6px;display:flex;align-items:center;justify-content:center}
+#drawStage canvas{position:absolute;height:100%;width:auto;aspect-ratio:260/300;background:transparent;touch-action:none}
+#drawCanvas{cursor:crosshair;background:rgba(255,255,255,.65)!important;border-radius:10px}
+#drawTools{display:flex;flex-direction:column;gap:6px}
+#btnDrawUse{align-self:center}
+@media (max-height:500px){ .srow .lab{flex-basis:44px;font-size:11px} .ctabs button{font-size:12px;padding:3px} .sw{width:18px;height:18px} }
