@@ -364,7 +364,13 @@ async function idbGet(k){ try{ const db = await idb(); return await new Promise(
 async function idbDel(k){ try{ const db = await idb(); db.transaction('kv','readwrite').objectStore('kv').delete(k); }catch(e){} }
 
 function setStatus(msg, err=false){ const s = $('charStatus'); s.textContent = msg; s.classList.toggle('err', err); }
-function setTag(){ $('charTag').textContent = { stick:'火柴人', draw:'我畫的', upload:'3D 模型' }[charState.kind] || '火柴人'; }
+function setTag(){
+  $('charTag').textContent = { stick:'火柴人', draw:'我畫的', upload:'3D 模型' }[charState.kind] || '火柴人';
+  const n = $('lvNote'); if(!n) return;
+  const ok = charState.kind === 'upload';
+  n.classList.toggle('ok', ok);
+  n.innerHTML = ok ? '✅ 目前用 <b>3D 角色</b>，<b>全部 5 關</b>都能玩！' : '🔒 火柴人和自己畫的角色可以玩<b>第 1、2 關</b>；上傳 Tinkercad <b>3D 角色</b>才能挑戰<b>全部 5 關</b>！';
+}
 
 async function useFiles(fileList){
   try{

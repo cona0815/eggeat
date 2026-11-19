@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <!--
-  美食冒險家  v2.10  ·  2026-11-19
+  美食冒險家  v2.11  ·  2026-11-19
+  v2.11 修正右上角暫停鈕按不到（也不會被切到畫面外）；角色卡分頁和說明條標出「火柴人／自己畫只能玩第 1、2 關，上傳 3D 才能玩全部 5 關」
   v2.10 火柴人／自己畫只能玩第 1、2 關；第 3 關起要上傳 3D 角色
   v2.9 預設角色改成自己捏的火柴人（頭型、表情、配件、顏色、粗細）或自己畫的角色；上傳 Tinkercad 3D 模型改成進階選項
   v2.8 大招能量累積變慢（約要 2.5～3 倍）
@@ -88,7 +89,7 @@
   <div class="title-wrap">
     <div class="title-left">
       <h1 class="logo"><span class="s">大橋</span><span class="b"><span>美</span><span>食</span><span>冒</span><span>險</span><span>家</span></span></h1>
-      <span class="ver num">v2.10 · 2026-11-19</span>
+      <span class="ver num">v2.11 · 2026-11-19</span>
       <nav class="menu">
         <button class="btn go" id="btnPlay">開始冒險</button>
         <button class="btn" id="btnDex">🍜 小吃圖鑑 <small id="dexCount" class="num"></small></button>
@@ -99,10 +100,11 @@
     <div class="card charcard">
       <h2>我的角色 <span class="tag" id="charTag">火柴人</span></h2>
       <div class="ctabs" id="charTabs">
-        <button data-ct="stick" class="on">🧩 捏火柴人</button>
-        <button data-ct="draw">✏️ 自己畫</button>
-        <button data-ct="upload">⬆ 上傳 3D<small>進階</small></button>
+        <button data-ct="stick" class="on">🧩 捏火柴人<small>可玩第 1、2 關</small></button>
+        <button data-ct="draw">✏️ 自己畫<small>可玩第 1、2 關</small></button>
+        <button data-ct="upload">⬆ 上傳 3D<small>進階・5 關全開</small></button>
       </div>
+      <div class="lvnote" id="lvNote">🔒 火柴人和自己畫的角色可以玩<b>第 1、2 關</b>；上傳 Tinkercad <b>3D 角色</b>才能挑戰<b>全部 5 關</b>！</div>
       <div id="previewBox"><canvas id="preview" width="360" height="360"></canvas><span class="hint" id="pvHint">待機</span>
         <div id="drawStage" hidden><canvas id="guideCanvas" width="260" height="300"></canvas><canvas id="drawCanvas" width="260" height="300"></canvas></div>
       </div>

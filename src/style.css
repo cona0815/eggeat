@@ -143,7 +143,8 @@ h1,h2,h3{text-wrap:balance}
 #ability{display:flex;align-items:center;gap:8px;font-weight:900}
 #ability b{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;border:3px solid var(--ink);font-size:18px;background:var(--panel-2)}
 #ability small{display:block;font-size:11px;color:var(--muted);font-weight:700}
-.iconbtn{width:44px;height:44px;border-radius:14px;font-size:18px;padding:0}
+.iconbtn{width:44px;height:44px;border-radius:14px;font-size:18px;padding:0;flex:none}
+#btnPause{pointer-events:auto;position:relative;z-index:11}
 @media (max-width:700px){ #lvname{font-size:13px} .meta{font-size:14px} #ability small{display:none} }
 @media (max-height:500px){
   .logo .b{font-size:54px} .logo .s{font-size:20px} .menu{margin-top:12px;gap:8px} .menu .btn{min-width:180px;padding:7px 14px;font-size:15px} .btn.go{font-size:18px;padding:9px 20px}
@@ -223,7 +224,11 @@ h1,h2,h3{text-wrap:balance}
 /* v2.9 角色分頁：捏火柴人／自己畫／上傳 3D */
 .ctabs{display:flex;gap:6px}
 .ctabs button{flex:1;cursor:pointer;border:3px solid var(--ink);background:var(--panel-2);border-radius:12px;padding:6px 4px;font:900 14px/1.2 inherit;color:var(--text);box-shadow:0 3px 0 var(--ink)}
-.ctabs button small{display:block;font-size:10px;opacity:.7}
+.ctabs button small{display:block;font-size:11px;opacity:.75;margin-top:1px}
+.lvnote{margin:8px 0 2px;padding:6px 10px;border-radius:10px;background:#fff4c2;border:2px dashed #e9a800;color:#5a4300;font-weight:800;font-size:13px;line-height:1.4}
+.lvnote b{color:#c62828}
+.lvnote.ok{background:#e3f7e8;border-color:#3aa55a;color:#1e5a2e}
+.lvnote.ok b{color:#1e5a2e}
 .ctabs button.on{background:var(--sun);color:#1f2a5a;transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
 .cpanel{display:flex;flex-direction:column;gap:6px}
 .cpanel[hidden],#drawTools[hidden],#drawDone[hidden],#drawStage[hidden]{display:none}
