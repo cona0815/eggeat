@@ -100,6 +100,8 @@ h1,h2,h3{text-wrap:balance}
 .lv .body small{display:block;color:var(--muted);font-weight:700;font-size:12px;margin-top:2px}
 .lv .stars{color:#e9a800;letter-spacing:2px;font-size:15px;margin-top:4px}
 .lv.locked{opacity:.5;cursor:not-allowed}
+.lv.need3d .thumb{filter:grayscale(.6) brightness(.9)}
+.lv .n3{position:absolute;left:8px;top:8px;font-family:inherit;font-size:12px;-webkit-text-stroke:0;color:#1f2a5a;background:#fff;border-radius:999px;padding:2px 8px;font-weight:900}
 .lv .rk{position:absolute;right:8px;top:6px;font-family:var(--f-num);font-size:26px;-webkit-text-stroke:4px #1f2a5a;color:var(--sun)}
 .dex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
 .dex-card{border:3px solid var(--ink);border-radius:16px;padding:8px;background:var(--panel-2);text-align:center;cursor:pointer;color:var(--text)}

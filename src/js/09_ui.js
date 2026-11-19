@@ -61,7 +61,18 @@ function closeTopPanel(){ const id = panelStack.pop(); if(id){ $(id).hidden = tr
 document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeTopPanel);
 function hideAllScreens(){ ['title','pause','result',...PANELS].forEach(id => $(id).hidden = true); panelStack = []; }
 
+/* 火柴人／自己畫只能玩第 1、2 關；第 3 關起要上傳 3D 角色（進階） */
+const FREE_LEVELS = 2;
+function levelAllowed(i){ return i < FREE_LEVELS || charState.kind === 'upload'; }
+function goUpload(){ goTitle(); setCharTab('upload'); setTimeout(() => { document.querySelector('.charcard')?.scrollIntoView({ behavior:'smooth', block:'center' }); }, 60); }
+function needUpload(i){
+  hideAllScreens(); $('hud').hidden = true; $('touch').hidden = true; document.body.classList.remove('playing');
+  showResult('', '🔒 第 ' + (i+1) + ' 關要用 3D 角色', null,
+    '火柴人和自己畫的角色可以玩第 1、2 關。從第 3 關開始，要上傳自己用 Tinkercad 做的 3D 角色才能挑戰！',
+    [['⬆ 去上傳 3D 角色', goUpload, 'go'], ['重玩第 ' + FREE_LEVELS + ' 關', () => startLevel(FREE_LEVELS - 1, true)], ['回標題', goTitle]]);
+}
 function startLevel(i, reset=false){
+  if(!levelAllowed(i)){ needUpload(i); return; }
   if(reset || lives <= 0){ lives = 3; starCount = 0; }
   hideAllScreens();
   $('hud').hidden = false; $('touch').hidden = !touchVisible(); document.body.classList.add('playing');
@@ -106,13 +117,14 @@ function renderLevelList(){
   const box = $('levelList'); box.innerHTML = '';
   LEVELS.forEach((L, i) => {
     const lockd = i + 1 > SAVE.unlocked;
+    const need3d = !lockd && !levelAllowed(i);
     const best = SAVE.best[i] || {};
     const tmp = new Level(L);
     const snackKinds = [...new Set(tmp.items.filter(it => SNACKS[it.type]).map(it => it.type))];
     const got = snackKinds.filter(k => SAVE.snacks[k]).length;
     const b = document.createElement('button');
-    b.className = 'lv' + (lockd ? ' locked' : ''); b.disabled = lockd;
-    b.innerHTML = `<div class="thumb" style="background:${THEMES[L.theme].thumb}">${lockd ? '🔒' : (i+1)}${best.rank ? `<span class="rk">${best.rank}</span>` : ''}</div>
+    b.className = 'lv' + (lockd ? ' locked' : '') + (need3d ? ' need3d' : ''); b.disabled = lockd;
+    b.innerHTML = `<div class="thumb" style="background:${THEMES[L.theme].thumb}">${lockd ? '🔒' : (i+1)}${need3d ? '<span class="n3">🧊 需要 3D 角色</span>' : ''}${best.rank ? `<span class="rk">${best.rank}</span>` : ''}</div>
       <div class="body"><b>${L.name}</b><small>${THEMES[L.theme].name}${L.width && tmp.boss ? '・魔王關' : ''}</small>
       <div class="stars num">★ ${best.stars || 0}/${tmp.starTotal}　🍜 ${got}/${snackKinds.length}</div></div>`;
     b.onclick = () => startLevel(i, true);

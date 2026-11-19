@@ -194,7 +194,7 @@ function setCharTab(t, apply = true){
     else { setDrawEditing(true); setStatus('照著淡淡的範例線畫一個火柴人（或任何角色），畫好按「✔ 用這張畫」。'); }
   } else {
     if(rawChar){ charState.kind = 'upload'; rebuildTemplate(); setTag(); idbSet('charKind', 'upload'); setStatus(`目前角色：「${charState.name}」。${rigSummary(charState.info)}`); }
-    else setStatus('進階：把 Tinkercad 匯出的 .OBJ zip 拖進黃色框，手腳分開做的零件會自動動起來。');
+    else setStatus('進階：把 Tinkercad 匯出的 .OBJ zip 拖進黃色框，手腳分開做的零件會自動動起來。上傳 3D 角色就能挑戰全部 5 關！');
   }
 }
 function initCharUI(){

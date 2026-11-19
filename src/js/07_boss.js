@@ -278,6 +278,8 @@ function levelClear(){
     const stats = [['星星', `${levelStars}/${lvl.starTotal}`], ['小吃', `${snacksFound.size}/${lvl.snackTotal}`], ['時間', fmtTime(levelTime)], ['打倒', enemiesDefeated]];
     if(next >= LEVELS.length) showResult(rank, '全部破關！', stats, `你和自己做的角色一起吃遍台南、打倒了雷雲王！小吃圖鑑收集了 ${Object.keys(SAVE.snacks).length}/${SNACK_ORDER.length} 種。`,
       [['再玩一次', () => startLevel(0, true), 'go'], ['小吃圖鑑', () => { goTitle(); openPanel('dex'); }], ['回標題', goTitle]]);
+    else if(!levelAllowed(next)) showResult(rank, '過關！', stats, LEVELS[levelIndex].name + '　完成！火柴人和自己畫的角色可以玩到這裡。第 3 關開始要上傳自己的 3D 角色（Tinkercad）才能挑戰！',
+      [['⬆ 去上傳 3D 角色', goUpload, 'go'], ['重玩這關', () => startLevel(levelIndex)], ['回標題', goTitle]]);
     else showResult(rank, '過關！', stats, LEVELS[levelIndex].name + (rank === 'S' ? '　完美！' : rank === 'A' ? '　很棒！' : '　再挑戰拿 S 吧！'),
       [['下一關 →', () => startLevel(next), 'go'], ['重玩這關', () => startLevel(levelIndex)], ['回標題', goTitle]]);
   }); }, 1400);
